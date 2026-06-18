@@ -317,10 +317,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_LIWlkhxJaf_XkyyiAQoQhw_678vBSDx";
 /* The anon key is meant to be public — your data is protected by the
    row-level-security rule you'll add in setup. Nothing else to edit. */
 
-/* ════════════════════════════════════════════════════════════════
-   2)  PASTE YOUR OPENAI API KEY HERE  (platform.openai.com/api-keys)
-   ════════════════════════════════════════════════════════════════ */
-const OPENAI_KEY = "YOUR-OPENAI-KEY";
+/* AI key is stored safely in Netlify environment variables — nothing to paste here. */
 
 /* ---------- seed + state ---------- */
 const SEED_FOODS = [
@@ -556,9 +553,6 @@ function wire(){
 
 /* ================= AI ASSISTANT ================= */
 async function parseWithAI(text) {
-  if (!OPENAI_KEY || OPENAI_KEY.includes("YOUR-")) {
-    throw new Error("Paste your OpenAI API key into the app (just below the Supabase keys).");
-  }
   const foodList = state.foods.map(f => `${f.name} (${f.unit})`).join(", ");
   const prompt = `You are a meal log assistant for a calorie tracking app. Parse the user's food description and return a JSON object.
 
@@ -581,12 +575,9 @@ Known foods: ${foodList}
 User's meal description:
 ${text}`;
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch("/.netlify/functions/ai-parse", {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "authorization": `Bearer ${OPENAI_KEY}`
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({model:"gpt-4o-mini",max_tokens:1024,messages:[{role:"user",content:prompt}]})
   });
   if (!res.ok) {
