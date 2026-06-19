@@ -406,6 +406,7 @@ async function loadData(){
     if(error)throw error;
     if(data&&data.data&&data.data.foods){
       state={...state,...data.data};
+      if(!state.foods.length)state.foods=SEED_FOODS.slice();
       if(!state.settings)state.settings={target:1500,pace:0.75,floor:1300,kcalPerKg:7700};
     }else{
       state.foods=SEED_FOODS.slice();state.log=[];state.weighins=[];
