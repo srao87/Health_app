@@ -24,8 +24,10 @@
   .brand .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--green-bright);margin-left:6px;}
   .brand small{display:block;color:var(--muted);font-size:12px;font-weight:500;margin-top:5px;}
   .hright{display:flex;flex-direction:column;align-items:flex-end;gap:7px;}
-  .datepill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;box-shadow:var(--shadow);}
+  .datepill{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:7px 12px;box-shadow:var(--shadow);}
   .datepill input{border:0;background:transparent;font-family:'Space Mono',monospace;font-size:13px;color:var(--ink);width:118px;outline:none;}
+  .datepill .daynav{border:0;background:transparent;color:var(--muted);font-size:17px;font-weight:700;cursor:pointer;line-height:1;padding:0 1px;}
+  .datepill .daynav:hover{color:var(--ink);}
   .who{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);max-width:200px;}
   .who span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;}
   .who button{border:0;background:transparent;color:var(--green);font-weight:600;font-size:11px;cursor:pointer;padding:2px 4px;}
@@ -197,7 +199,9 @@
     <div class="hright">
       <div class="datepill">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#727A6D" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <button class="daynav" id="prevDay" aria-label="Previous day">‹</button>
         <input type="date" id="logDate" />
+        <button class="daynav" id="nextDay" aria-label="Next day">›</button>
       </div>
       <div class="who"><i class="syncing" id="syncDot"></i><span id="who"></span><button id="signout">Sign out</button></div>
     </div>
@@ -419,11 +423,12 @@ async function loadData(){
 const saveFoods=persist,saveLog=persist,saveWeigh=persist,saveSettings=persist;
 
 /* ---------- helpers ---------- */
-const todayStr=()=>new Date().toISOString().slice(0,10);
+const localDateStr=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+const todayStr=()=>localDateStr(new Date());
 const fmt=n=>Math.round(n).toLocaleString();
 const f1=n=>(Math.round(n*10)/10);
 function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1700);}
-function addDays(s,n){const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}
+function addDays(s,n){const d=new Date(s+"T00:00:00");d.setDate(d.getDate()+n);return localDateStr(d);}
 const foodByName=n=>state.foods.find(f=>f.name===n);
 
 const COOK_FACTORS={
@@ -542,6 +547,8 @@ function switchTab(t){
 }
 function wire(){
   $("#logDate").value=todayStr();$("#wDate").value=todayStr();$("#logDate").onchange=renderLog;
+  function shiftDay(n){const d=new Date($("#logDate").value+"T00:00:00");d.setDate(d.getDate()+n);const nd=localDateStr(d);if(n>0&&nd>todayStr())return;$("#logDate").value=nd;renderLog();}
+  $("#prevDay").onclick=()=>shiftDay(-1);$("#nextDay").onclick=()=>shiftDay(1);
   document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
   $("#mealSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#mealSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.meal=b.dataset.meal;});
   $("#foodSelect").onchange=()=>{updateUnitHint();updateCookRow();};
@@ -574,7 +581,7 @@ function wire(){
       const {entries=[],new_foods=[]}=await parseWithAI(text);
       new_foods.forEach(f=>{if(!foodByName(f.name))state.foods.push({...f,custom:true});});
       const date=$("#logDate").value;
-      entries.forEach(e=>{state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date,meal:e.meal,food:e.food,qty:e.qty});});
+      entries.forEach(e=>{state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date,meal:e.meal,food:e.food,qty:e.qty,method:e.method||'raw'});});
       persist();renderFoodSelect();renderLog();
       msg.style.color="var(--green)";
       msg.textContent=`Added ${entries.length} entr${entries.length===1?"y":"ies"}${new_foods.length?` (${new_foods.length} new food${new_foods.length>1?"s":""} added)`:""}. Check the log above.`;
