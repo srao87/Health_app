@@ -348,9 +348,9 @@ const $=s=>document.querySelector(s);
 async function boot(){
   if(!keysReady()){ $("#setupGate").style.display="flex"; return; }
   if(typeof window.supabase==="undefined"){ $("#authGate").style.display="flex"; $("#authMsg").className="msg err"; $("#authMsg").textContent="Couldn't load the sign-in library. Check your connection and reload."; return; }
-  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
   wireAuth();
-  sb.auth.onAuthStateChange((_e,session)=>handleSession(session));
+  sb.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_IN')handleSession(session);if(event==='SIGNED_OUT')handleSession(null);});
   const {data:{session}}=await sb.auth.getSession();
   handleSession(session);
 }
@@ -371,7 +371,7 @@ function wireAuth(){
     if(error){authMsg(error.message,true);}else{authMsg("");$("#otpBox").style.display="none";}
   };
   $("#googleBtn").onclick=async()=>{
-    const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.href}});
+    const {error}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
     if(error)authMsg(error.message,true);
   };
   $("#signout").onclick=async()=>{ await sb.auth.signOut(); };
@@ -380,14 +380,18 @@ function authMsg(t,err){const m=$("#authMsg");m.textContent=t;m.className="msg"+
 
 async function handleSession(session){
   if(session&&session.user){
+    const firstLoad=!currentUser;
     currentUser=session.user;
     $("#authGate").style.display="none";$("#setupGate").style.display="none";
     $("#who").textContent=session.user.email||"signed in";
-    await loadData();
-    if(!wired){wire();wired=true;}
-    renderFoodSelect();renderLog();
+    if(firstLoad){
+      await loadData();
+      if(!wired){wire();wired=true;}
+      renderFoodSelect();renderLog();
+    }
   }else{
     currentUser=null;
+    wired=false;
     $("#authGate").style.display="flex";
   }
 }
