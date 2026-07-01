@@ -63,6 +63,9 @@
   select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23727A6D' stroke-width='2.5'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 13px center;padding-right:36px;}
   input:focus,select:focus,textarea:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(44,122,82,.12);}
   textarea{resize:vertical;min-height:88px;line-height:1.5;font-size:14px;}
+  .quickpicks{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
+  .qp{border:1px solid var(--line);background:var(--surface-2);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;transition:.15s;white-space:nowrap;}
+  .qp:hover{background:var(--green);color:#fff;border-color:var(--green);}
   .formrow{display:grid;gap:10px;}
   .qtywrap{position:relative;}
   .qtywrap .unit{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);font-family:'Space Mono',monospace;pointer-events:none;}
@@ -226,6 +229,7 @@
         <button data-meal="Breakfast" class="on">Breakfast</button><button data-meal="Lunch">Lunch</button>
         <button data-meal="Evening">Evening</button><button data-meal="Dinner">Dinner</button><button data-meal="Dessert">Dessert</button>
       </div>
+      <div id="quickpicks" class="quickpicks" style="display:none;"></div>
       <div class="formrow">
         <div><label class="field">Food</label><select id="foodSelect"></select></div>
         <div id="cookRow" style="display:none;"><label class="field">Cooking method</label><div class="seg" id="cookSeg"><button data-cook="raw" class="on">Raw</button><button data-cook="boiled">Boiled</button><button data-cook="stirfried">Stir-fried</button></div></div>
@@ -457,7 +461,21 @@ function getCookFactor(foodName,method){
 function renderFoodSelect(){
   const sel=$("#foodSelect");
   sel.innerHTML=state.foods.map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");
-  updateUnitHint();updateCookRow();
+  updateUnitHint();updateCookRow();renderQuickPicks();
+}
+function getFrequentFoods(n=6){
+  const counts={};
+  state.log.forEach(e=>{counts[e.food]=(counts[e.food]||0)+1;});
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([name])=>name).filter(name=>foodByName(name));
+}
+function renderQuickPicks(){
+  const foods=getFrequentFoods();const wrap=$("#quickpicks");
+  if(!foods.length){wrap.style.display="none";return;}
+  wrap.style.display="flex";
+  wrap.innerHTML=foods.map(name=>`<button class="qp" data-food="${name.replace(/"/g,'&quot;')}">${name}</button>`).join("");
+  wrap.querySelectorAll(".qp").forEach(b=>b.onclick=()=>{
+    $("#foodSelect").value=b.dataset.food;updateUnitHint();updateCookRow();$("#qty").focus();
+  });
 }
 function updateUnitHint(){const f=foodByName($("#foodSelect").value);$("#qtyUnit").textContent=f?UNIT_LABEL[f.unit]:"";}
 function updateCookRow(){
@@ -560,7 +578,7 @@ function wire(){
   $("#addBtn").onclick=()=>{const food=$("#foodSelect").value,qty=parseFloat($("#qty").value);
     if(!food||!(qty>0)){toast("Enter a quantity first");return;}
     state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date:$("#logDate").value,meal:state.meal,food,qty,method:cookMethod});
-    saveLog();$("#qty").value="";renderLog();toast("Added");};
+    saveLog();$("#qty").value="";renderLog();renderQuickPicks();toast("Added");};
   $("#qty").addEventListener("keydown",e=>{if(e.key==="Enter")$("#addBtn").click();});
   $("#cfUnitSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cfUnitSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cfUnit=b.dataset.u;syncCfLabels();});
   $("#cfAdd").onclick=()=>{const name=$("#cfName").value.trim();if(!name){toast("Name your food");return;}if(foodByName(name)){toast("That name already exists");return;}
