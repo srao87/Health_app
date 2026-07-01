@@ -330,6 +330,7 @@ const SUPABASE_ANON_KEY = "sb_publishable_LIWlkhxJaf_XkyyiAQoQhw_678vBSDx";
 
 /* ---------- seed + state ---------- */
 const SEED_FOODS = [
+  /* ── staples ── */
   ["Whole Boiled Egg","piece",78,6.3,0.6,5.3],["Egg White","piece",17,3.6,0.2,0.1],
   ["Low-Fat Milk","ml",0.42,0.034,0.05,0.01],["Whole Wheat Chapathi","piece",85,3,18,0.5],
   ["Mixed Veg Sabzi","g",1.0,0.02,0.09,0.06],["Low-Fat Buttermilk","ml",0.2,0.01,0.025,0.005],
@@ -338,7 +339,23 @@ const SEED_FOODS = [
   ["Tomato & Onion Base","g",0.4,0.01,0.08,0.005],["Boiled Sweet Corn","g",0.96,0.034,0.21,0.015],
   ["Cooking Oil","ml",9,0,0,1],["Low-Fat Greek Yogurt","g",0.6,0.1,0.036,0.007],
   ["Honey","g",3.0,0.003,0.82,0],["Mixed Berries","g",0.5,0.01,0.12,0.003],
-  ["Classic Cream Kunafa","piece",450,5,50,24]
+  ["Classic Cream Kunafa","piece",450,5,50,24],
+  /* ── drinks ── */
+  ["Milk Coffee (Homemade)","ml",0.37,0.019,0.029,0.020],
+  ["Protein Buttermilk","ml",0.26,0.029,0.025,0.003],
+  /* ── snacks & street food ── */
+  ["Rava Vada (Small)","piece",165,4,22,7],
+  ["Chicken Shawarma Jumbo Roll","piece",750,50,55,30],
+  /* ── sweets & treats ── */
+  ["Cadbury Perk Bar","piece",107,1.4,14.2,5.1],
+  ["Magnum Almond Ice Cream","piece",280,4,26,17],
+  ["Bournville Dark Chocolate (2 cubes)","piece",46,0.5,5.5,3.0],
+  /* ── dairy ── */
+  ["Low-Fat Flavored Yogurt","g",0.65,0.045,0.11,0.010],
+  /* ── eggs & mains ── */
+  ["Egg Omelette (2 eggs)","piece",165,12,1,13],
+  ["Pepper Chicken Fry","g",1.80,0.220,0.04,0.090],
+  ["Rajma Masala","g",1.25,0.065,0.18,0.035],
 ].map(([name,unit,cal,p,c,f])=>({name,unit,cal,p,c,f,custom:false}));
 const UNIT_LABEL={g:"grams",ml:"ml",piece:"pieces"};
 let state={foods:[],log:[],weighins:[],settings:{target:1500,pace:0.75,floor:1300,kcalPerKg:7700},meal:"Breakfast"};
@@ -421,6 +438,7 @@ async function loadData(){
     if(data&&data.data&&data.data.foods){
       state={...state,...data.data};
       if(!state.foods.length)state.foods=SEED_FOODS.slice();
+      else{const names=new Set(state.foods.map(f=>f.name));SEED_FOODS.forEach(sf=>{if(!names.has(sf.name))state.foods.push(sf);});}
       if(!state.settings)state.settings={target:1500,pace:0.75,floor:1300,kcalPerKg:7700};
     }else{
       state.foods=SEED_FOODS.slice();state.log=[];state.weighins=[];
