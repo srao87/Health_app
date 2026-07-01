@@ -246,7 +246,7 @@
   /* inline quick-add for unknown foods */
   .ri-quick-add{background:var(--surface-2);border:1.5px dashed var(--line);border-radius:11px;padding:10px 12px;margin-top:8px;display:none;}
   .ri-quick-add p{font-size:12px;color:var(--muted);margin:0 0 8px;font-weight:500;}
-  .ri-quick-add-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;}
+  .ri-quick-add-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px;}
   .ri-quick-add-grid>div>label{font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;}
   .ri-quick-add-grid input{width:100%;box-sizing:border-box;padding:7px 8px;font-size:13px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;background:var(--surface);color:var(--ink);}
   /* marinade hint in log panel */
@@ -334,7 +334,7 @@
       <div id="quickpicks" class="quickpicks" style="display:none;"></div>
       <!-- single-food / saved-recipe mode -->
       <div id="singleMode" class="formrow">
-        <div><label class="field">Food</label><input type="text" id="foodSearch" class="food-search" autocomplete="off" placeholder="Search foods…" /><select id="foodSelect"></select></div>
+        <div><label class="field">Food</label><div class="ri-food-ac"><input type="text" id="foodSearch" class="ri-food-inp" autocomplete="off" placeholder="Search foods…"/><div class="ri-food-drop" id="foodDrop"></div></div><input type="hidden" id="foodSelect" class="ri-food"/></div>
         <!-- auto-shown when selected food is a saved recipe -->
         <div id="rcpLogPanel" style="display:none;" class="rcp-panel">
           <div class="rcp-col-heads"><span>Ingredient</span><span>Raw qty</span><span>Cooked</span></div>
@@ -634,12 +634,8 @@ function getCookFactor(foodName,method){
 }
 
 /* ================= LOG ================= */
-function renderFoodSelect(q){
-  const sel=$("#foodSelect");
-  const q2=(q||'').toLowerCase();
-  const foods=q2?state.foods.filter(f=>f.name.toLowerCase().includes(q2)):state.foods;
-  sel.innerHTML=foods.map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");
-  updateUnitHint();updateCookRow();renderQuickPicks();
+function renderFoodSelect(){
+  renderQuickPicks();
 }
 function getFrequentFoods(n=6){
   const counts={};
@@ -652,7 +648,9 @@ function renderQuickPicks(){
   wrap.style.display="flex";
   wrap.innerHTML=foods.map(name=>`<button class="qp" data-food="${name.replace(/"/g,'&quot;')}">${name}</button>`).join("");
   wrap.querySelectorAll(".qp").forEach(b=>b.onclick=()=>{
-    $("#foodSelect").value=b.dataset.food;updateUnitHint();updateCookRow();$("#qty").focus();
+    const nm=b.dataset.food;
+    $("#foodSearch").value=nm;$("#foodSelect").value=nm;
+    updateUnitHint();updateCookRow();$("#qty").focus();
   });
 }
 function updateUnitHint(){const f=foodByName($("#foodSelect").value);$("#qtyUnit").textContent=f?UNIT_LABEL[f.unit]:"";}
@@ -921,13 +919,12 @@ function wire(){
   $("#prevDay").onclick=()=>shiftDay(-1);$("#nextDay").onclick=()=>shiftDay(1);
   document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
   $("#mealSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#mealSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.meal=b.dataset.meal;});
-  $("#foodSearch").addEventListener("input",function(){renderFoodSelect(this.value);});
-  $("#foodSelect").onchange=()=>{updateUnitHint();updateCookRow();};
+  wireRiFoodAC(document.getElementById('singleMode'),null,{filterFn:f=>true,onPick:nm=>{updateUnitHint();updateCookRow();},onFreeType:nm=>{updateUnitHint();updateCookRow();}});
   $("#cookSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cookSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cookMethod=b.dataset.cook;});
   $("#addBtn").onclick=()=>{const food=$("#foodSelect").value,qty=parseFloat($("#qty").value);
     if(!food||!(qty>0)){toast("Enter a quantity first");return;}
     state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date:$("#logDate").value,meal:state.meal,food,qty,method:cookMethod});
-    saveLog();$("#qty").value="";renderLog();renderQuickPicks();toast("Added");};
+    saveLog();$("#qty").value="";$("#foodSearch").value="";$("#foodSelect").value="";updateUnitHint();updateCookRow();renderLog();renderQuickPicks();toast("Added");};
   $("#qty").addEventListener("keydown",e=>{if(e.key==="Enter")$("#addBtn").click();});
 
   /* ---- recipe mode ---- */
@@ -1033,9 +1030,9 @@ function wire(){
       return{food,rawQty,cookedQty,marinated,marinadeDesc,method};
     }).filter(i=>i.food&&i.rawQty>0);
     if(!ingredients.length){toast("Add at least one ingredient with a raw qty");return;}
-    let cal=0,p=0,c=0,fat=0;
-    ingredients.forEach(ing=>{const fd=foodByName(ing.food);if(!fd)return;const fac=fd.unit==='g'?getCookFactor(ing.food,ing.method):1;cal+=fd.cal*ing.rawQty*fac;p+=fd.p*ing.rawQty*fac;c+=fd.c*ing.rawQty*fac;fat+=fd.f*ing.rawQty*fac;});
-    state.foods.push({name,unit:"piece",cal:Math.round(cal),p:f1(p),c:f1(c),f:f1(fat),custom:true,isRecipe:true,ingredients});
+    let cal=0,p=0,c=0,fat=0,fi=0;
+    ingredients.forEach(ing=>{const fd=foodByName(ing.food);if(!fd)return;const fac=fd.unit==='g'?getCookFactor(ing.food,ing.method):1;cal+=fd.cal*ing.rawQty*fac;p+=fd.p*ing.rawQty*fac;c+=fd.c*ing.rawQty*fac;fat+=fd.f*ing.rawQty*fac;fi+=(fd.fi||0)*ing.rawQty;});
+    state.foods.push({name,unit:"piece",cal:Math.round(cal),p:f1(p),c:f1(c),f:f1(fat),fi:f1(fi),custom:true,isRecipe:true,ingredients});
     saveFoods();renderFoods();renderFoodSelect();
     $("#rcpName").value="";
     $("#rcpCreateRows").innerHTML="";addRcpCreateRow();addRcpCreateRow();
@@ -1056,23 +1053,6 @@ function wire(){
   $("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({foods:state.foods,log:state.log,weighins:state.weighins,settings:state.settings},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ledger-backup.json";a.click();};
   $("#importBtn").onclick=()=>$("#importFile").click();
   $("#importFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.foods)state.foods=d.foods;if(d.log)state.log=d.log;if(d.weighins)state.weighins=d.weighins;if(d.settings)state.settings={...state.settings,...d.settings};persist();renderFoodSelect();renderLog();renderFoods();renderWeight();toast("Data imported");}catch(err){toast("Couldn't read that file");}};r.readAsText(file);};
-  $("#aiBtn").onclick=async()=>{
-    const text=$("#aiText").value.trim();
-    if(!text){toast("Paste your meals first");return;}
-    const msg=$("#aiMsg");msg.style.color="var(--muted)";msg.textContent="Analysing…";
-    $("#aiBtn").disabled=true;
-    try{
-      const {entries=[],new_foods=[]}=await parseWithAI(text);
-      new_foods.forEach(f=>{if(!foodByName(f.name))state.foods.push({...f,custom:true});});
-      const date=$("#logDate").value;
-      entries.forEach(e=>{state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date,meal:e.meal,food:e.food,qty:e.qty,method:e.method||'raw'});});
-      persist();renderFoodSelect();renderLog();
-      msg.style.color="var(--green)";
-      msg.textContent=`Added ${entries.length} entr${entries.length===1?"y":"ies"}${new_foods.length?` (${new_foods.length} new food${new_foods.length>1?"s":""} added)`:""}. Check the log above.`;
-      toast("Log updated");
-    }catch(e){msg.style.color="var(--coral)";msg.textContent="Error: "+e.message;}
-    finally{$("#aiBtn").disabled=false;}
-  };
   syncCfLabels();wireChatInput();
 }
 
