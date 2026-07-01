@@ -171,6 +171,24 @@
   .msg.err{color:var(--coral);}
   .setup-steps{font-size:13px;color:var(--ink);line-height:1.65;}
   .setup-steps code{background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-family:'Space Mono',monospace;font-size:12px;}
+  /* recipe badge on food cards */
+  .recipe-badge{display:inline-block;font-size:9.5px;font-weight:700;color:var(--green-mid);background:var(--green-glow);border-radius:5px;padding:2px 6px;letter-spacing:.04em;text-transform:uppercase;margin-left:6px;vertical-align:middle;}
+  /* recipe log panel (auto-shown when a saved recipe is selected) */
+  .rcp-panel{background:var(--surface-2);border-radius:14px;padding:14px 14px 10px;margin-top:2px;}
+  .rcp-col-heads{display:grid;grid-template-columns:1fr 82px 76px;gap:5px;margin-bottom:6px;}
+  .rcp-col-heads span{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center;}
+  .rcp-col-heads span:first-child{text-align:left;}
+  .rcp-log-row{display:grid;grid-template-columns:1fr 82px 76px;gap:5px;align-items:center;margin-bottom:6px;}
+  .rcp-log-row .rl-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rcp-log-row input{padding:8px 9px;font-size:13px;text-align:center;}
+  .rcp-mar{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+  .rcp-mar-desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;font-style:italic;}
+  /* recipe creation form */
+  .rcp-create-row{display:grid;grid-template-columns:1fr 72px 72px auto;gap:5px;align-items:center;margin-bottom:6px;}
+  .rcp-create-row select,.rcp-create-row input[type=number]{padding:8px 9px;font-size:13px;}
+  .rcp-create-col-heads{display:grid;grid-template-columns:1fr 72px 72px 30px;gap:5px;margin-bottom:4px;}
+  .rcp-create-col-heads span{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center;}
+  .rcp-create-col-heads span:first-child{text-align:left;}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
 </head>
@@ -245,24 +263,36 @@
       <label class="field">Meal window</label>
       <div class="seg" id="mealSeg" style="margin-bottom:12px;">
         <button data-meal="Breakfast" class="on">Breakfast</button><button data-meal="Lunch">Lunch</button>
-        <button data-meal="Evening">Evening</button><button data-meal="Dinner">Dinner</button><button data-meal="Dessert">Dessert</button>
+        <button data-meal="Evening">Evening</button><button data-meal="Dinner">Dinner</button>
       </div>
       <div id="quickpicks" class="quickpicks" style="display:none;"></div>
-      <!-- single-food mode -->
+      <!-- single-food / saved-recipe mode -->
       <div id="singleMode" class="formrow">
         <div><label class="field">Food</label><select id="foodSelect"></select></div>
+        <!-- auto-shown when selected food is a saved recipe -->
+        <div id="rcpLogPanel" style="display:none;" class="rcp-panel">
+          <div class="rcp-col-heads"><span>Ingredient</span><span>Raw qty</span><span>Cooked</span></div>
+          <div id="rcpLogRows"></div>
+          <div id="rcpLogMar" style="display:none;" class="rcp-mar">
+            <div class="rcp-mar-desc" id="rcpLogMarDesc"></div>
+            <label class="field">Marinated this time?</label>
+            <div class="seg" id="rcpLogMarSeg"><button class="on" data-marused="yes">Yes</button><button data-marused="no">No</button></div>
+          </div>
+          <button class="btn" id="rcpLogBtn" style="margin-top:10px;">Log recipe</button>
+        </div>
+        <!-- normal single-food controls (hidden when recipe selected) -->
         <div id="cookRow" style="display:none;"><label class="field">Cooking method</label><div class="seg" id="cookSeg"><button data-cook="raw" class="on">Raw</button><button data-cook="boiled">Boiled</button><button data-cook="stirfried">Stir-fried</button></div></div>
-        <div><label class="field">Quantity</label><div class="qtywrap"><input type="number" id="qty" inputmode="decimal" placeholder="0" min="0" step="any" /><span class="unit" id="qtyUnit">grams</span></div></div>
+        <div id="qtyRow"><label class="field">Quantity</label><div class="qtywrap"><input type="number" id="qty" inputmode="decimal" placeholder="0" min="0" step="any" /><span class="unit" id="qtyUnit">grams</span></div></div>
         <button class="btn" id="addBtn">Add to log</button>
       </div>
-      <!-- recipe mode -->
+      <!-- ad-hoc multi-food mode -->
       <div id="recipeMode" style="display:none;">
-        <label class="field" style="margin-bottom:8px;">Recipe ingredients</label>
+        <label class="field" style="margin-bottom:8px;">Multiple ingredients</label>
         <div id="recipeRows"></div>
         <button class="btn ghost sm" id="addIngBtn" style="margin-bottom:10px;">+ Add ingredient</button>
-        <button class="btn" id="logRecipeBtn">Log all ingredients</button>
+        <button class="btn" id="logRecipeBtn">Log all</button>
       </div>
-      <button class="recipe-toggle" id="recipeToggle">+ Log as recipe (multiple ingredients)</button>
+      <button class="recipe-toggle" id="recipeToggle">+ Log multiple foods at once</button>
     </div>
     <div class="card">
       <label class="field">AI meal assistant</label>
@@ -290,6 +320,28 @@
           <div><label class="field" id="lblFat">Fat / 100g</label><input type="number" id="cfFat" inputmode="decimal" placeholder="0" /></div>
         </div>
         <button class="btn" id="cfAdd">Save food</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:4px;">
+      <h2 class="sec" style="margin-top:2px;">Create a recipe</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.55;">Build a multi-ingredient dish once. When you log it, the app asks for the raw &amp; cooked weight of each ingredient.</p>
+      <div class="formrow">
+        <div><label class="field">Recipe name</label><input type="text" id="rcpName" placeholder="e.g. Pepper Chicken Fry" /></div>
+        <div>
+          <label class="field">Ingredients</label>
+          <div class="rcp-create-col-heads"><span>Food</span><span>Raw qty</span><span>Cooked</span><span></span></div>
+          <div id="rcpCreateRows"></div>
+          <button class="btn ghost sm" id="rcpAddRow" style="margin-top:2px;">+ Add ingredient</button>
+        </div>
+        <div>
+          <label class="field">Marinated?</label>
+          <div class="seg" id="rcpMarSeg"><button class="on" data-mar="no">No</button><button data-mar="yes">Yes</button></div>
+        </div>
+        <div id="rcpMarDescWrap" style="display:none;">
+          <label class="field">Marinade ingredients</label>
+          <input type="text" id="rcpMarDesc" placeholder="e.g. salt, pepper, turmeric, yogurt, lemon" />
+        </div>
+        <button class="btn" id="rcpSaveBtn">Save recipe</button>
       </div>
     </div>
     <h2 class="sec">Food database</h2>
@@ -525,9 +577,27 @@ function renderQuickPicks(){
 function updateUnitHint(){const f=foodByName($("#foodSelect").value);$("#qtyUnit").textContent=f?UNIT_LABEL[f.unit]:"";}
 function updateCookRow(){
   const f=foodByName($("#foodSelect").value);
-  const show=f&&f.unit==='g';
-  $("#cookRow").style.display=show?"":"none";
-  if(!show){cookMethod='raw';$("#cookSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.cook==='raw'));}
+  const isRcp=f&&f.isRecipe&&f.ingredients&&f.ingredients.length;
+  /* recipe panel */
+  $("#rcpLogPanel").style.display=isRcp?"":"none";
+  if(isRcp) updateRcpLogPanel(f);
+  /* normal controls */
+  const showCook=f&&f.unit==='g'&&!isRcp;
+  $("#cookRow").style.display=showCook?"":"none";
+  if(!showCook){cookMethod='raw';$("#cookSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.cook==='raw'));}
+  $("#qtyRow").style.display=isRcp?"none":"";
+  $("#addBtn").style.display=isRcp?"none":"";
+}
+function updateRcpLogPanel(f){
+  const wrap=$("#rcpLogRows");wrap.innerHTML="";
+  f.ingredients.forEach((ing,i)=>{
+    const fd=foodByName(ing.food);const unit=fd?UNIT_LABEL[fd.unit]:'g';
+    const row=document.createElement("div");row.className="rcp-log-row";
+    row.innerHTML=`<span class="rl-name">${ing.food}</span><div class="qtywrap"><input type="number" class="ri-raw" inputmode="decimal" value="${ing.rawQty||''}" placeholder="raw" min="0" step="any"/><span class="unit" style="right:6px;">${unit}</span></div><input type="number" class="ri-cooked" inputmode="decimal" value="${ing.cookedQty||''}" placeholder="opt" min="0" step="any"/>`;
+    wrap.appendChild(row);
+  });
+  const marSec=$("#rcpLogMar");marSec.style.display=f.marinade?"":"none";
+  if(f.marinade)$("#rcpLogMarDesc").textContent=`Usual marinade: ${f.marinadeDesc||""}`;
 }
 const dayEntries=date=>state.log.filter(e=>e.date===date);
 function calcEntry(e){
@@ -564,7 +634,14 @@ function renderLog(){
 let cfUnit="g";
 function renderFoods(){
   const wrap=$("#foodList");
-  wrap.innerHTML=state.foods.map(f=>`<div class="foodcard"><div class="fname"><b>${f.name}</b><span>per ${f.unit==='piece'?'piece':'1 '+f.unit} · ${fmt(f.cal*(f.unit==='piece'?1:100))} kcal ${f.unit==='piece'?'':'/100'+f.unit}</span></div><div class="pcf"><i class="pc-p">${f1(f.p*(f.unit==='piece'?1:100))}<u>P</u></i><i class="pc-c">${f1(f.c*(f.unit==='piece'?1:100))}<u>C</u></i><i class="pc-f">${f1(f.f*(f.unit==='piece'?1:100))}<u>F</u></i></div>${f.custom?`<button class="del" data-n="${f.name.replace(/"/g,'&quot;')}" aria-label="Remove">×</button>`:''}</div>`).join("");
+  wrap.innerHTML=state.foods.map(f=>{
+    const badge=f.isRecipe?`<span class="recipe-badge">recipe</span>`:'';
+    const detail=f.isRecipe?`${f.ingredients?f.ingredients.length:0} ingredients${f.marinade?' · marinated':''}`:
+      `per ${f.unit==='piece'?'piece':'1 '+f.unit} · ${fmt(f.cal*(f.unit==='piece'?1:100))} kcal ${f.unit==='piece'?'':'/100'+f.unit}`;
+    const pcf=f.isRecipe?`<div class="pcf"><i class="pc-p">${fmt(f.cal)}<u>kcal</u></i><i class="pc-p">${f1(f.p)}<u>P</u></i><i class="pc-c">${f1(f.c)}<u>C</u></i><i class="pc-f">${f1(f.f)}<u>F</u></i></div>`:
+      `<div class="pcf"><i class="pc-p">${f1(f.p*(f.unit==='piece'?1:100))}<u>P</u></i><i class="pc-c">${f1(f.c*(f.unit==='piece'?1:100))}<u>C</u></i><i class="pc-f">${f1(f.f*(f.unit==='piece'?1:100))}<u>F</u></i></div>`;
+    return `<div class="foodcard"><div class="fname"><b>${f.name}${badge}</b><span>${detail}</span></div>${pcf}${f.custom?`<button class="del" data-n="${f.name.replace(/"/g,'&quot;')}" aria-label="Remove">×</button>`:''}</div>`;
+  }).join("");
   wrap.querySelectorAll(".del").forEach(b=>b.onclick=()=>{state.foods=state.foods.filter(f=>f.name!==b.dataset.n);saveFoods();renderFoods();renderFoodSelect();});
 }
 function syncCfLabels(){const per=cfUnit==='piece'?'/ piece':'/ 100'+cfUnit;$("#lblCal").textContent="Calories "+per;$("#lblPro").textContent="Protein "+per;$("#lblCarb").textContent="Carbs "+per;$("#lblFat").textContent="Fat "+per;}
@@ -642,7 +719,7 @@ function wire(){
     recipeOpen=!recipeOpen;
     $("#singleMode").style.display=recipeOpen?"none":"";
     $("#recipeMode").style.display=recipeOpen?"":"none";
-    $("#recipeToggle").textContent=recipeOpen?"← Back to single food":"+ Log as recipe (multiple ingredients)";
+    $("#recipeToggle").textContent=recipeOpen?"← Back to single food":"+ Log multiple foods at once";
     if(recipeOpen&&!$("#recipeRows").children.length){addRecipeRow();addRecipeRow();}
   };
   $("#addIngBtn").onclick=()=>addRecipeRow();
@@ -655,6 +732,58 @@ function wire(){
     saveLog();renderLog();renderQuickPicks();
     toast(`Logged ${entries.length} ingredient${entries.length>1?"s":""}`);
     $("#recipeRows").innerHTML="";addRecipeRow();addRecipeRow();
+  };
+
+  /* ---- saved recipe log panel ---- */
+  let rcpLogMarUsed=true;
+  $("#rcpLogMarSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#rcpLogMarSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");rcpLogMarUsed=b.dataset.marused==="yes";});
+  $("#rcpLogBtn").onclick=()=>{
+    const f=foodByName($("#foodSelect").value);
+    if(!f||!f.isRecipe||!f.ingredients)return;
+    const rows=[...$("#rcpLogRows").querySelectorAll(".rcp-log-row")];
+    const date=$("#logDate").value;let added=0;
+    rows.forEach((row,i)=>{
+      const ing=f.ingredients[i];
+      const rawQty=parseFloat(row.querySelector(".ri-raw").value);
+      if(!ing||!(rawQty>0))return;
+      state.log.push({id:Date.now()+""+Math.floor(Math.random()*999)+i,date,meal:state.meal,food:ing.food,qty:rawQty,method:ing.method||'raw',fromRecipe:f.name});
+      added++;
+    });
+    if(!added){toast("Enter at least one quantity");return;}
+    saveLog();renderLog();renderQuickPicks();
+    toast(`${f.name} logged (${added} item${added>1?"s":""})`);
+  };
+
+  /* ---- recipe creation (Foods tab) ---- */
+  function nonRcpFoodOpts(){return state.foods.filter(f=>!f.isRecipe).map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");}
+  function addRcpCreateRow(food='',rawQty='',cookedQty=''){
+    const wrap=$("#rcpCreateRows");const row=document.createElement("div");row.className="rcp-create-row";
+    row.innerHTML=`<select class="ri-food">${nonRcpFoodOpts()}</select><input type="number" class="ri-raw" inputmode="decimal" placeholder="raw" min="0" step="any" value="${rawQty}"/><input type="number" class="ri-cooked" inputmode="decimal" placeholder="opt" min="0" step="any" value="${cookedQty}"/><button class="rdel" aria-label="Remove">×</button>`;
+    if(food)row.querySelector(".ri-food").value=food;
+    row.querySelector(".rdel").onclick=()=>row.remove();
+    wrap.appendChild(row);
+  }
+  addRcpCreateRow();addRcpCreateRow();
+  let rcpMar=false;
+  $("#rcpMarSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#rcpMarSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");rcpMar=b.dataset.mar==="yes";$("#rcpMarDescWrap").style.display=rcpMar?"":"none";});
+  $("#rcpAddRow").onclick=()=>addRcpCreateRow();
+  $("#rcpSaveBtn").onclick=()=>{
+    const name=$("#rcpName").value.trim();
+    if(!name){toast("Give your recipe a name");return;}
+    if(foodByName(name)){toast("That name already exists");return;}
+    const rows=[...$("#rcpCreateRows").querySelectorAll(".rcp-create-row")];
+    const ingredients=rows.map(r=>({food:r.querySelector(".ri-food").value,rawQty:parseFloat(r.querySelector(".ri-raw").value)||0,cookedQty:parseFloat(r.querySelector(".ri-cooked").value)||null,method:'raw'})).filter(i=>i.food&&i.rawQty>0);
+    if(!ingredients.length){toast("Add at least one ingredient with a raw qty");return;}
+    let cal=0,p=0,c=0,fat=0;
+    ingredients.forEach(ing=>{const fd=foodByName(ing.food);if(!fd)return;const fac=fd.unit==='g'?getCookFactor(ing.food,ing.method):1;cal+=fd.cal*ing.rawQty*fac;p+=fd.p*ing.rawQty*fac;c+=fd.c*ing.rawQty*fac;fat+=fd.f*ing.rawQty*fac;});
+    const marinadeDesc=rcpMar?($("#rcpMarDesc").value.trim()):"";
+    state.foods.push({name,unit:"piece",cal:Math.round(cal),p:f1(p),c:f1(c),f:f1(fat),custom:true,isRecipe:true,ingredients,marinade:rcpMar,marinadeDesc});
+    saveFoods();renderFoods();renderFoodSelect();
+    $("#rcpName").value="";if($("#rcpMarDesc"))$("#rcpMarDesc").value="";
+    $("#rcpCreateRows").innerHTML="";addRcpCreateRow();addRcpCreateRow();
+    $("#rcpMarSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.mar==="no"));
+    $("#rcpMarDescWrap").style.display="none";rcpMar=false;
+    toast("Recipe saved! Find it in the food dropdown.");
   };
   $("#cfUnitSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cfUnitSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cfUnit=b.dataset.u;syncCfLabels();});
   $("#cfAdd").onclick=()=>{const name=$("#cfName").value.trim();if(!name){toast("Name your food");return;}if(foodByName(name)){toast("That name already exists");return;}
