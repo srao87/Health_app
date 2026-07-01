@@ -78,10 +78,21 @@
   .recipe-toggle{border:0;background:transparent;color:var(--green-mid);font-size:12px;font-weight:600;cursor:pointer;padding:4px 0;margin-bottom:8px;display:block;opacity:.8;}
   .recipe-toggle:hover{opacity:1;}
   .recipe-row{display:grid;grid-template-columns:1fr 90px auto;gap:6px;align-items:center;margin-bottom:7px;}
-  .recipe-row select,.recipe-row input{padding:9px 10px;font-size:13px;}
+  .recipe-row input[type=number]{padding:9px 10px;font-size:13px;}
   .recipe-row .runit{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;white-space:nowrap;}
   .recipe-row .rdel{border:0;background:transparent;color:var(--line);font-size:18px;cursor:pointer;padding:2px 5px;border-radius:7px;transition:.15s;}
   .recipe-row .rdel:hover{color:var(--coral);}
+  /* food typeahead */
+  .ri-food-ac{position:relative;}
+  .ri-food-inp{width:100%;box-sizing:border-box;padding:9px 10px;font-size:13px;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font-family:inherit;}
+  .ri-food-inp:focus{outline:none;border-color:var(--green-mid);}
+  .ri-food-drop{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.14);z-index:300;max-height:180px;overflow-y:auto;display:none;}
+  .ac-opt{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);}
+  .ac-opt:last-child{border:none;}
+  .ac-opt:hover,.ac-opt:active{background:var(--green-glow);}
+  /* food filter on log tab */
+  .food-search{width:100%;box-sizing:border-box;margin-bottom:6px;border-radius:12px;padding:10px 14px;font-size:14px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-family:inherit;}
+  .food-search:focus{outline:none;border-color:var(--green-mid);}
 
   .formrow{display:grid;gap:10px;}
   .qtywrap{position:relative;}
@@ -158,7 +169,7 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
   /* ── AI chat screen ── */
-  #view-ai.active{display:flex;flex-direction:column;padding:0;}
+  #view-ai.active{display:flex;flex-direction:column;padding:0;height:calc(100dvh - 96px - 100px);}
   .chat-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:12px;min-height:0;}
   .msg-row{display:flex;align-items:flex-end;gap:8px;}
   .msg-row.user{flex-direction:row-reverse;}
@@ -211,7 +222,8 @@
   .rcp-mar-desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;font-style:italic;}
   /* recipe creation form */
   .rcp-create-row{display:grid;grid-template-columns:1fr 72px 72px auto;gap:5px;align-items:center;margin-bottom:6px;}
-  .rcp-create-row select,.rcp-create-row input[type=number]{padding:8px 9px;font-size:13px;}
+  .rcp-create-row input[type=number]{padding:8px 9px;font-size:13px;}
+  .rcp-create-row .ri-food-inp{padding:8px 9px;}
   .rcp-create-col-heads{display:grid;grid-template-columns:1fr 72px 72px 30px;gap:5px;margin-bottom:4px;}
   .rcp-create-col-heads span{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center;}
   .rcp-create-col-heads span:first-child{text-align:left;}
@@ -294,7 +306,7 @@
       <div id="quickpicks" class="quickpicks" style="display:none;"></div>
       <!-- single-food / saved-recipe mode -->
       <div id="singleMode" class="formrow">
-        <div><label class="field">Food</label><select id="foodSelect"></select></div>
+        <div><label class="field">Food</label><input type="text" id="foodSearch" class="food-search" autocomplete="off" placeholder="Search foods…" /><select id="foodSelect"></select></div>
         <!-- auto-shown when selected food is a saved recipe -->
         <div id="rcpLogPanel" style="display:none;" class="rcp-panel">
           <div class="rcp-col-heads"><span>Ingredient</span><span>Raw qty</span><span>Cooked</span></div>
@@ -407,7 +419,7 @@
   </section>
 
   <!-- ===== AI CHAT SCREEN ===== -->
-  <section class="view" id="view-ai" style="height:calc(100vh - 130px);">
+  <section class="view" id="view-ai">
     <div class="chat-msgs" id="chatMsgs"></div>
     <div class="chat-bar">
       <textarea id="chatInput" placeholder="Tell me what you ate…" rows="1"></textarea>
@@ -545,16 +557,23 @@ async function loadData(){
   try{
     const {data,error}=await sb.from("user_data").select("data").eq("user_id",currentUser.id).maybeSingle();
     if(error)throw error;
-    if(data&&data.data&&data.data.foods){
-      state={...state,...data.data};
-      if(!state.foods.length)state.foods=SEED_FOODS.slice();
-      else{const names=new Set(state.foods.map(f=>f.name));SEED_FOODS.forEach(sf=>{if(!names.has(sf.name))state.foods.push(sf);});}
-      if(!state.settings)state.settings={target:1500,pace:0.75,floor:1300,kcalPerKg:7700};
-    }else{
-      state.foods=SEED_FOODS.slice();state.log=[];state.weighins=[];
+    if(data&&data.data){
+      const d=data.data;
+      if(d.foods&&d.foods.length)state.foods=d.foods;
+      if(d.log)state.log=d.log;
+      if(d.weighins)state.weighins=d.weighins;
+      if(d.settings)state.settings={...state.settings,...d.settings};
+    }else if(!data){
       await persistNow();
     }
-  }catch(e){toast("Couldn't load your data");state.foods=SEED_FOODS.slice();}
+    const names=new Set(state.foods.map(f=>f.name));
+    SEED_FOODS.forEach(sf=>{if(!names.has(sf.name))state.foods.push(sf);});
+    if(!state.settings)state.settings={target:1500,pace:0.75,floor:1300,kcalPerKg:7700};
+  }catch(e){
+    console.error('loadData',e);toast("Couldn't load your data");
+    const names=new Set(state.foods.map(f=>f.name));
+    SEED_FOODS.forEach(sf=>{if(!names.has(sf.name))state.foods.push(sf);});
+  }
 }
 const saveFoods=persist,saveLog=persist,saveWeigh=persist,saveSettings=persist;
 
@@ -586,9 +605,11 @@ function getCookFactor(foodName,method){
 }
 
 /* ================= LOG ================= */
-function renderFoodSelect(){
+function renderFoodSelect(q){
   const sel=$("#foodSelect");
-  sel.innerHTML=state.foods.map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");
+  const q2=(q||'').toLowerCase();
+  const foods=q2?state.foods.filter(f=>f.name.toLowerCase().includes(q2)):state.foods;
+  sel.innerHTML=foods.map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");
   updateUnitHint();updateCookRow();renderQuickPicks();
 }
 function getFrequentFoods(n=6){
@@ -720,7 +741,49 @@ function switchTab(t){
   document.querySelectorAll("section.view").forEach(v=>v.classList.toggle("active",v.id==="view-"+t));
   if(t==="weight")renderWeight();
   if(t==="foods")renderFoods();
-  if(t==="ai"){if(!chatReady)initChat();}
+  if(t==="ai"){
+    const hdr=document.querySelector('header.bar');
+    const nav=document.querySelector('nav.tabs');
+    const ai=document.getElementById('view-ai');
+    const h=window.innerHeight-(hdr?hdr.offsetHeight:100)-(nav?nav.offsetHeight:96);
+    ai.style.height=h+'px';
+    if(!chatReady)initChat();
+  }
+}
+function wireRiFoodAC(row,initFood,opts){
+  opts=opts||{};
+  const inp=row.querySelector('.ri-food-inp');
+  const drop=row.querySelector('.ri-food-drop');
+  const hidden=row.querySelector('.ri-food');
+  const filterFn=opts.filterFn||(f=>!f.isRecipe);
+  function showDrop(q){
+    const hits=state.foods.filter(filterFn).filter(f=>!q||f.name.toLowerCase().includes(q.toLowerCase())).slice(0,9);
+    if(!hits.length){drop.style.display='none';return;}
+    drop.innerHTML=hits.map(f=>`<div class="ac-opt" data-n="${f.name.replace(/"/g,'&quot;')}">${f.name}</div>`).join('');
+    drop.querySelectorAll('.ac-opt').forEach(el=>el.addEventListener('pointerdown',ev=>{
+      ev.preventDefault();inp.value=el.dataset.n;hidden.value=el.dataset.n;drop.style.display='none';
+      if(opts.onPick)opts.onPick(el.dataset.n);
+    }));
+    drop.style.display='block';
+  }
+  inp.addEventListener('input',()=>{hidden.value=inp.value;showDrop(inp.value);});
+  inp.addEventListener('focus',()=>showDrop(inp.value));
+  inp.addEventListener('blur',()=>{setTimeout(()=>drop.style.display='none',180);hidden.value=inp.value;});
+  if(initFood){inp.value=initFood;hidden.value=initFood;}
+}
+function autoCookedWeight(row){
+  const food=row.querySelector('.ri-food').value;
+  const rawEl=row.querySelector('.ri-raw');
+  const cookedEl=row.querySelector('.ri-cooked');
+  if(!rawEl||!cookedEl)return;
+  const raw=parseFloat(rawEl.value);
+  if(!raw||raw<=0)return;
+  const n=(food||'').toLowerCase();
+  let method='stirfried';
+  if(/rice|pasta|noodle|\boat\b|chapathi|roti|wheat|rajma|lentil|\bdal\b|chickpea|bean|moong|chana/.test(n))method='boiled';
+  const factor=getCookFactor(food,method);
+  if(factor===1)return;
+  cookedEl.value=Math.round(raw/factor);
 }
 function wire(){
   $("#logDate").value=todayStr();$("#wDate").value=todayStr();$("#logDate").onchange=renderLog;
@@ -728,6 +791,7 @@ function wire(){
   $("#prevDay").onclick=()=>shiftDay(-1);$("#nextDay").onclick=()=>shiftDay(1);
   document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
   $("#mealSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#mealSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.meal=b.dataset.meal;});
+  $("#foodSearch").addEventListener("input",function(){renderFoodSelect(this.value);});
   $("#foodSelect").onchange=()=>{updateUnitHint();updateCookRow();};
   $("#cookSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cookSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cookMethod=b.dataset.cook;});
   $("#addBtn").onclick=()=>{const food=$("#foodSelect").value,qty=parseFloat($("#qty").value);
@@ -738,14 +802,12 @@ function wire(){
 
   /* ---- recipe mode ---- */
   let recipeOpen=false;
-  function foodOptionsHTML(){return state.foods.map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");}
   function addRecipeRow(name='',qty=''){
     const row=document.createElement("div");row.className="recipe-row";
-    const f=name?foodByName(name):state.foods[0];
-    row.innerHTML=`<select class="ri-food">${foodOptionsHTML()}</select><input type="number" class="ri-qty" inputmode="decimal" placeholder="qty" min="0" step="any" value="${qty}" /><span class="runit">${f?UNIT_LABEL[f.unit]:''}</span><button class="rdel" aria-label="Remove">×</button>`;
-    if(name)row.querySelector(".ri-food").value=name;
-    row.querySelector(".ri-food").onchange=function(){const fd=foodByName(this.value);row.querySelector(".runit").textContent=fd?UNIT_LABEL[fd.unit]:'';}
+    row.innerHTML=`<div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search food…"/><div class="ri-food-drop"></div></div><input type="hidden" class="ri-food"/><input type="number" class="ri-qty" inputmode="decimal" placeholder="qty" min="0" step="any" value="${qty}" /><span class="runit"></span><button class="rdel" aria-label="Remove">×</button>`;
+    wireRiFoodAC(row,name,{filterFn:f=>true,onPick:nm=>{const fd=foodByName(nm);row.querySelector(".runit").textContent=fd?UNIT_LABEL[fd.unit]:'';}});
     row.querySelector(".rdel").onclick=()=>row.remove();
+    if(name){const fd=foodByName(name);if(fd)row.querySelector(".runit").textContent=UNIT_LABEL[fd.unit]||'';}
     $("#recipeRows").appendChild(row);
   }
   $("#recipeToggle").onclick=()=>{
@@ -788,11 +850,11 @@ function wire(){
   };
 
   /* ---- recipe creation (Foods tab) ---- */
-  function nonRcpFoodOpts(){return state.foods.filter(f=>!f.isRecipe).map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");}
   function addRcpCreateRow(food='',rawQty='',cookedQty=''){
     const wrap=$("#rcpCreateRows");const row=document.createElement("div");row.className="rcp-create-row";
-    row.innerHTML=`<select class="ri-food">${nonRcpFoodOpts()}</select><input type="number" class="ri-raw" inputmode="decimal" placeholder="raw" min="0" step="any" value="${rawQty}"/><input type="number" class="ri-cooked" inputmode="decimal" placeholder="opt" min="0" step="any" value="${cookedQty}"/><button class="rdel" aria-label="Remove">×</button>`;
-    if(food)row.querySelector(".ri-food").value=food;
+    row.innerHTML=`<div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search or type name…"/><div class="ri-food-drop"></div></div><input type="hidden" class="ri-food"/><input type="number" class="ri-raw" inputmode="decimal" placeholder="raw g" min="0" step="any" value="${rawQty}"/><input type="number" class="ri-cooked" inputmode="decimal" placeholder="auto" min="0" step="any" value="${cookedQty}"/><button class="rdel" aria-label="Remove">×</button>`;
+    wireRiFoodAC(row,food,{onPick:()=>autoCookedWeight(row)});
+    row.querySelector('.ri-raw').addEventListener('input',()=>autoCookedWeight(row));
     row.querySelector(".rdel").onclick=()=>row.remove();
     wrap.appendChild(row);
   }
@@ -805,7 +867,7 @@ function wire(){
     if(!name){toast("Give your recipe a name");return;}
     if(foodByName(name)){toast("That name already exists");return;}
     const rows=[...$("#rcpCreateRows").querySelectorAll(".rcp-create-row")];
-    const ingredients=rows.map(r=>({food:r.querySelector(".ri-food").value,rawQty:parseFloat(r.querySelector(".ri-raw").value)||0,cookedQty:parseFloat(r.querySelector(".ri-cooked").value)||null,method:'raw'})).filter(i=>i.food&&i.rawQty>0);
+    const ingredients=rows.map(r=>{const food=r.querySelector(".ri-food").value;const rawQty=parseFloat(r.querySelector(".ri-raw").value)||0;const cookedQty=parseFloat(r.querySelector(".ri-cooked").value)||null;const n=(food||'').toLowerCase();const method=/rice|pasta|noodle|\boat\b|chapathi|roti|wheat|rajma|lentil|\bdal\b|chickpea|bean|moong|chana/.test(n)?'boiled':'stirfried';return{food,rawQty,cookedQty,method};}).filter(i=>i.food&&i.rawQty>0);
     if(!ingredients.length){toast("Add at least one ingredient with a raw qty");return;}
     let cal=0,p=0,c=0,fat=0;
     ingredients.forEach(ing=>{const fd=foodByName(ing.food);if(!fd)return;const fac=fd.unit==='g'?getCookFactor(ing.food,ing.method):1;cal+=fd.cal*ing.rawQty*fac;p+=fd.p*ing.rawQty*fac;c+=fd.c*ing.rawQty*fac;fat+=fd.f*ing.rawQty*fac;});
