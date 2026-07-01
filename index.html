@@ -220,13 +220,36 @@
   .rcp-log-row input{padding:8px 9px;font-size:13px;text-align:center;}
   .rcp-mar{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
   .rcp-mar-desc{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.5;font-style:italic;}
-  /* recipe creation form */
-  .rcp-create-row{display:grid;grid-template-columns:1fr 72px 72px auto;gap:5px;align-items:center;margin-bottom:6px;}
-  .rcp-create-row input[type=number]{padding:8px 9px;font-size:13px;}
-  .rcp-create-row .ri-food-inp{padding:8px 9px;}
-  .rcp-create-col-heads{display:grid;grid-template-columns:1fr 72px 72px 30px;gap:5px;margin-bottom:4px;}
-  .rcp-create-col-heads span{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:center;}
-  .rcp-create-col-heads span:first-child{text-align:left;}
+  /* ingredient cards (recipe creation) */
+  .ri-card{background:var(--surface-2);border-radius:14px;padding:12px;margin-bottom:10px;border:1.5px solid var(--line);}
+  .ri-card-head{display:flex;align-items:center;gap:8px;}
+  .ri-card-head .ri-food-ac{flex:1;}
+  .ri-card-head .rdel{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;padding:2px 8px;border-radius:8px;transition:.15s;flex-shrink:0;}
+  .ri-card-head .rdel:hover{color:var(--coral);}
+  .ri-card-body{margin-top:10px;}
+  .ri-weights-row{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end;margin-bottom:8px;}
+  .ri-wfield label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px;}
+  .ri-wfield input{width:100%;box-sizing:border-box;padding:9px 10px;border:1.5px solid var(--line);border-radius:10px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--ink);}
+  .ri-wfield input:focus{outline:none;border-color:var(--green-mid);}
+  .ri-arr{color:var(--muted);font-size:18px;text-align:center;padding-bottom:4px;}
+  .ri-macros{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+  .ri-macro-chip{background:var(--surface);border-radius:8px;padding:5px 8px;font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:baseline;}
+  .ri-macro-chip b{color:var(--ink);font-variant-numeric:tabular-nums;}
+  .ri-ing-mar{border-top:1px solid var(--line);padding-top:10px;margin-top:2px;}
+  .ri-ing-mar-row{display:flex;align-items:center;gap:10px;}
+  .ri-ing-mar-row label{font-size:12px;font-weight:600;color:var(--muted);min-width:76px;}
+  .ri-ing-mar-row .seg button{padding:4px 12px;font-size:12px;}
+  .ri-ing-mar-body{margin-top:8px;}
+  .ri-ing-mar-body textarea{width:100%;box-sizing:border-box;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;font-size:13px;font-family:inherit;resize:none;background:var(--surface);color:var(--ink);}
+  .ri-ing-mar-body textarea:focus{outline:none;border-color:var(--green-mid);}
+  /* inline quick-add for unknown foods */
+  .ri-quick-add{background:var(--surface-2);border:1.5px dashed var(--line);border-radius:11px;padding:10px 12px;margin-top:8px;display:none;}
+  .ri-quick-add p{font-size:12px;color:var(--muted);margin:0 0 8px;font-weight:500;}
+  .ri-quick-add-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;}
+  .ri-quick-add-grid>div>label{font-size:10px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;text-transform:uppercase;}
+  .ri-quick-add-grid input{width:100%;box-sizing:border-box;padding:7px 8px;font-size:13px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;background:var(--surface);color:var(--ink);}
+  /* marinade hint in log panel */
+  .ri-mar-hint{font-size:11px;color:var(--muted);font-style:italic;margin-top:1px;line-height:1.4;}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
 </head>
@@ -357,20 +380,11 @@
       <h2 class="sec" style="margin-top:2px;">Create a recipe</h2>
       <p style="font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.55;">Build a multi-ingredient dish once. When you log it, the app asks for the raw &amp; cooked weight of each ingredient.</p>
       <div class="formrow">
-        <div><label class="field">Recipe name</label><input type="text" id="rcpName" placeholder="e.g. Pepper Chicken Fry" /></div>
+        <div><label class="field">Recipe name</label><input type="text" id="rcpName" placeholder="e.g. Pesto Chicken Pasta" /></div>
         <div>
           <label class="field">Ingredients</label>
-          <div class="rcp-create-col-heads"><span>Food</span><span>Raw qty</span><span>Cooked</span><span></span></div>
           <div id="rcpCreateRows"></div>
           <button class="btn ghost sm" id="rcpAddRow" style="margin-top:2px;">+ Add ingredient</button>
-        </div>
-        <div>
-          <label class="field">Marinated?</label>
-          <div class="seg" id="rcpMarSeg"><button class="on" data-mar="no">No</button><button data-mar="yes">Yes</button></div>
-        </div>
-        <div id="rcpMarDescWrap" style="display:none;">
-          <label class="field">Marinade ingredients</label>
-          <input type="text" id="rcpMarDesc" placeholder="e.g. salt, pepper, turmeric, yogurt, lemon" />
         </div>
         <button class="btn" id="rcpSaveBtn">Save recipe</button>
       </div>
@@ -645,11 +659,13 @@ function updateRcpLogPanel(f){
   f.ingredients.forEach((ing,i)=>{
     const fd=foodByName(ing.food);const unit=fd?UNIT_LABEL[fd.unit]:'g';
     const row=document.createElement("div");row.className="rcp-log-row";
-    row.innerHTML=`<span class="rl-name">${ing.food}</span><div class="qtywrap"><input type="number" class="ri-raw" inputmode="decimal" value="${ing.rawQty||''}" placeholder="raw" min="0" step="any"/><span class="unit" style="right:6px;">${unit}</span></div><input type="number" class="ri-cooked" inputmode="decimal" value="${ing.cookedQty||''}" placeholder="opt" min="0" step="any"/>`;
+    const marHint=ing.marinated&&ing.marinadeDesc?`<div class="ri-mar-hint">Marinade: ${ing.marinadeDesc}</div>`:'';
+    row.innerHTML=`<div><span class="rl-name">${ing.food}</span>${marHint}</div><div class="qtywrap"><input type="number" class="ri-raw" inputmode="decimal" value="${ing.rawQty||''}" placeholder="raw" min="0" step="any"/><span class="unit" style="right:6px;">${unit}</span></div><input type="number" class="ri-cooked" inputmode="decimal" value="${ing.cookedQty||''}" placeholder="opt" min="0" step="any"/>`;
     wrap.appendChild(row);
   });
-  const marSec=$("#rcpLogMar");marSec.style.display=f.marinade?"":"none";
-  if(f.marinade)$("#rcpLogMarDesc").textContent=`Usual marinade: ${f.marinadeDesc||""}`;
+  const marSec=$("#rcpLogMar");
+  marSec.style.display=(f.marinade&&!f.ingredients.some(i=>i.marinated!==undefined))?"":"none";
+  if(f.marinade)$("#rcpLogMarDesc").textContent=`Marinade: ${f.marinadeDesc||""}`;
 }
 const dayEntries=date=>state.log.filter(e=>e.date===date);
 function calcEntry(e){
@@ -766,10 +782,25 @@ function wireRiFoodAC(row,initFood,opts){
     }));
     drop.style.display='block';
   }
-  inp.addEventListener('input',()=>{hidden.value=inp.value;showDrop(inp.value);});
+  inp.addEventListener('input',()=>{hidden.value=inp.value;showDrop(inp.value);if(opts.onFreeType)opts.onFreeType(inp.value);});
   inp.addEventListener('focus',()=>showDrop(inp.value));
-  inp.addEventListener('blur',()=>{setTimeout(()=>drop.style.display='none',180);hidden.value=inp.value;});
+  inp.addEventListener('blur',()=>{setTimeout(()=>{drop.style.display='none';if(opts.onFreeType)opts.onFreeType(inp.value);},180);hidden.value=inp.value;});
   if(initFood){inp.value=initFood;hidden.value=initFood;}
+}
+function updateRiNutrition(row){
+  const food=row.querySelector('.ri-food').value;
+  const fd=foodByName(food);
+  const calEl=row.querySelector('.ri-cal');
+  if(!fd||!calEl)return;
+  const raw=parseFloat(row.querySelector('.ri-raw').value)||0;
+  if(!raw){['.ri-cal','.ri-pro','.ri-car','.ri-fat'].forEach(s=>{const e=row.querySelector(s);if(e)e.textContent='—';});return;}
+  const n=food.toLowerCase();
+  const method=/rice|pasta|noodle|\boat\b|chapathi|roti|wheat|rajma|lentil|\bdal\b|chickpea|bean|moong|chana/.test(n)?'boiled':'stirfried';
+  const fac=fd.unit==='g'?getCookFactor(food,method):1;
+  row.querySelector('.ri-cal').textContent=Math.round(fd.cal*raw*fac);
+  row.querySelector('.ri-pro').textContent=(fd.p*raw*fac).toFixed(1);
+  row.querySelector('.ri-car').textContent=(fd.c*raw*fac).toFixed(1);
+  row.querySelector('.ri-fat').textContent=(fd.f*raw*fac).toFixed(1);
 }
 function autoCookedWeight(row){
   const food=row.querySelector('.ri-food').value;
@@ -850,35 +881,65 @@ function wire(){
   };
 
   /* ---- recipe creation (Foods tab) ---- */
-  function addRcpCreateRow(food='',rawQty='',cookedQty=''){
-    const wrap=$("#rcpCreateRows");const row=document.createElement("div");row.className="rcp-create-row";
-    row.innerHTML=`<div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search or type name…"/><div class="ri-food-drop"></div></div><input type="hidden" class="ri-food"/><input type="number" class="ri-raw" inputmode="decimal" placeholder="raw g" min="0" step="any" value="${rawQty}"/><input type="number" class="ri-cooked" inputmode="decimal" placeholder="auto" min="0" step="any" value="${cookedQty}"/><button class="rdel" aria-label="Remove">×</button>`;
-    wireRiFoodAC(row,food,{onPick:()=>autoCookedWeight(row)});
-    row.querySelector('.ri-raw').addEventListener('input',()=>autoCookedWeight(row));
-    row.querySelector(".rdel").onclick=()=>row.remove();
-    wrap.appendChild(row);
+  function addRcpCreateRow(food='',rawQty='',cookedQty='',marinated=false,marinadeDesc=''){
+    const wrap=$("#rcpCreateRows");
+    const card=document.createElement("div");card.className="ri-card";
+    card.innerHTML=`<div class="ri-card-head"><div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search or type ingredient name…"/><div class="ri-food-drop"></div></div><input type="hidden" class="ri-food"/><button class="rdel" aria-label="Remove">×</button></div><div class="ri-card-body" style="display:none;"><div class="ri-weights-row"><div class="ri-wfield"><label>Raw (g)</label><input type="number" class="ri-raw" inputmode="decimal" placeholder="0" min="0" step="any" value="${rawQty}"/></div><div class="ri-arr">→</div><div class="ri-wfield"><label>Cooked (g)</label><input type="number" class="ri-cooked" inputmode="decimal" placeholder="auto" min="0" step="any" value="${cookedQty}"/></div></div><div class="ri-macros"><div class="ri-macro-chip">Cal <b class="ri-cal">—</b></div><div class="ri-macro-chip">Protein <b class="ri-pro">—</b>g</div><div class="ri-macro-chip">Carbs <b class="ri-car">—</b>g</div><div class="ri-macro-chip">Fat <b class="ri-fat">—</b>g</div></div><div class="ri-ing-mar"><div class="ri-ing-mar-row"><label>Marinated?</label><div class="seg ri-mar-seg"><button data-mar="no" class="${marinated?'':'on'}">No</button><button data-mar="yes" class="${marinated?'on':''}">Yes</button></div></div><div class="ri-ing-mar-body" style="${marinated?'':'display:none'};"><textarea class="ri-mar-desc" placeholder="e.g. garlic, lemon, olive oil, pepper, turmeric…" rows="2">${marinadeDesc}</textarea></div></div></div><div class="ri-quick-add"><p id="qa-label-${Date.now()}">Not in database — add nutrition per 100g to continue:</p><div class="ri-quick-add-grid"><div><label>Cal (kcal)</label><input type="number" class="qa-cal" placeholder="e.g. 165" min="0" step="1"/></div><div><label>Protein (g)</label><input type="number" class="qa-pro" placeholder="e.g. 31" min="0" step="0.1"/></div><div><label>Carbs (g)</label><input type="number" class="qa-car" placeholder="e.g. 0" min="0" step="0.1"/></div><div><label>Fat (g)</label><input type="number" class="qa-fat" placeholder="e.g. 3.6" min="0" step="0.1"/></div></div><button class="btn ghost sm qa-btn">Add to my database</button></div>`;
+    const body=card.querySelector('.ri-card-body');
+    const quickAdd=card.querySelector('.ri-quick-add');
+    function showBody(){body.style.display='';if(rawQty){autoCookedWeight(card);updateRiNutrition(card);}}
+    function checkUnknown(name){
+      if(!name||name.length<2)return;
+      if(foodByName(name)){quickAdd.style.display='none';showBody();}
+      else{quickAdd.style.display='block';body.style.display='none';}
+    }
+    wireRiFoodAC(card,food,{onPick:nm=>{quickAdd.style.display='none';showBody();},onFreeType:checkUnknown});
+    if(food&&foodByName(food))showBody();
+    card.querySelector('.ri-raw').addEventListener('input',()=>{autoCookedWeight(card);updateRiNutrition(card);});
+    card.querySelector('.ri-cooked').addEventListener('input',()=>updateRiNutrition(card));
+    card.querySelectorAll('.ri-mar-seg button').forEach(b=>b.onclick=()=>{
+      card.querySelectorAll('.ri-mar-seg button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+      card.querySelector('.ri-ing-mar-body').style.display=b.dataset.mar==='yes'?'':'none';
+    });
+    card.querySelector('.qa-btn').onclick=()=>{
+      const nm=card.querySelector('.ri-food').value.trim();if(!nm)return;
+      const cal=parseFloat(card.querySelector('.qa-cal').value)||0;
+      const pro=parseFloat(card.querySelector('.qa-pro').value)||0;
+      const car=parseFloat(card.querySelector('.qa-car').value)||0;
+      const fat=parseFloat(card.querySelector('.qa-fat').value)||0;
+      state.foods.push({name:nm,unit:'g',cal:cal/100,p:pro/100,c:car/100,f:fat/100,custom:true});
+      persist();renderFoodSelect();
+      quickAdd.style.display='none';showBody();toast(nm+' added to database');
+    };
+    card.querySelector('.rdel').onclick=()=>card.remove();
+    wrap.appendChild(card);
   }
   addRcpCreateRow();addRcpCreateRow();
-  let rcpMar=false;
-  $("#rcpMarSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#rcpMarSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");rcpMar=b.dataset.mar==="yes";$("#rcpMarDescWrap").style.display=rcpMar?"":"none";});
   $("#rcpAddRow").onclick=()=>addRcpCreateRow();
   $("#rcpSaveBtn").onclick=()=>{
     const name=$("#rcpName").value.trim();
     if(!name){toast("Give your recipe a name");return;}
     if(foodByName(name)){toast("That name already exists");return;}
-    const rows=[...$("#rcpCreateRows").querySelectorAll(".rcp-create-row")];
-    const ingredients=rows.map(r=>{const food=r.querySelector(".ri-food").value;const rawQty=parseFloat(r.querySelector(".ri-raw").value)||0;const cookedQty=parseFloat(r.querySelector(".ri-cooked").value)||null;const n=(food||'').toLowerCase();const method=/rice|pasta|noodle|\boat\b|chapathi|roti|wheat|rajma|lentil|\bdal\b|chickpea|bean|moong|chana/.test(n)?'boiled':'stirfried';return{food,rawQty,cookedQty,method};}).filter(i=>i.food&&i.rawQty>0);
+    const cards=[...$("#rcpCreateRows").querySelectorAll(".ri-card")];
+    const ingredients=cards.map(card=>{
+      const food=card.querySelector(".ri-food").value;
+      const rawQty=parseFloat(card.querySelector(".ri-raw").value)||0;
+      const cookedQty=parseFloat(card.querySelector(".ri-cooked").value)||null;
+      const marBtn=card.querySelector('[data-mar="yes"]');
+      const marinated=!!(marBtn&&marBtn.classList.contains('on'));
+      const marinadeDesc=marinated?(card.querySelector('.ri-mar-desc').value.trim()):'';
+      const n=(food||'').toLowerCase();
+      const method=/rice|pasta|noodle|\boat\b|chapathi|roti|wheat|rajma|lentil|\bdal\b|chickpea|bean|moong|chana/.test(n)?'boiled':'stirfried';
+      return{food,rawQty,cookedQty,marinated,marinadeDesc,method};
+    }).filter(i=>i.food&&i.rawQty>0);
     if(!ingredients.length){toast("Add at least one ingredient with a raw qty");return;}
     let cal=0,p=0,c=0,fat=0;
     ingredients.forEach(ing=>{const fd=foodByName(ing.food);if(!fd)return;const fac=fd.unit==='g'?getCookFactor(ing.food,ing.method):1;cal+=fd.cal*ing.rawQty*fac;p+=fd.p*ing.rawQty*fac;c+=fd.c*ing.rawQty*fac;fat+=fd.f*ing.rawQty*fac;});
-    const marinadeDesc=rcpMar?($("#rcpMarDesc").value.trim()):"";
-    state.foods.push({name,unit:"piece",cal:Math.round(cal),p:f1(p),c:f1(c),f:f1(fat),custom:true,isRecipe:true,ingredients,marinade:rcpMar,marinadeDesc});
+    state.foods.push({name,unit:"piece",cal:Math.round(cal),p:f1(p),c:f1(c),f:f1(fat),custom:true,isRecipe:true,ingredients});
     saveFoods();renderFoods();renderFoodSelect();
-    $("#rcpName").value="";if($("#rcpMarDesc"))$("#rcpMarDesc").value="";
+    $("#rcpName").value="";
     $("#rcpCreateRows").innerHTML="";addRcpCreateRow();addRcpCreateRow();
-    $("#rcpMarSeg").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.mar==="no"));
-    $("#rcpMarDescWrap").style.display="none";rcpMar=false;
-    toast("Recipe saved! Find it in the food dropdown.");
+    toast("Recipe saved! Select it from the food dropdown to log it.");
   };
   $("#cfUnitSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cfUnitSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cfUnit=b.dataset.u;syncCfLabels();});
   $("#cfAdd").onclick=()=>{const name=$("#cfName").value.trim();if(!name){toast("Name your food");return;}if(foodByName(name)){toast("That name already exists");return;}
