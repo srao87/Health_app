@@ -251,6 +251,9 @@
   .ri-quick-add-grid input{width:100%;box-sizing:border-box;padding:7px 8px;font-size:13px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;background:var(--surface);color:var(--ink);}
   /* marinade hint in log panel */
   .ri-mar-hint{font-size:11px;color:var(--muted);font-style:italic;margin-top:1px;line-height:1.4;}
+  /* pdf export bar */
+  .export-bar{display:flex;gap:8px;align-items:center;padding:10px 14px 6px;}
+  .export-bar select{flex:1;padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;font-size:13px;background:var(--surface);color:var(--ink);font-family:inherit;}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
 </head>
@@ -358,6 +361,15 @@
       <button class="recipe-toggle" id="recipeToggle">+ Log multiple foods at once</button>
     </div>
     <div id="entryList"></div>
+    <div class="export-bar">
+      <select id="pdfRange">
+        <option value="today">Today</option>
+        <option value="week">Last 7 days</option>
+        <option value="month">This month</option>
+        <option value="all">All data</option>
+      </select>
+      <button class="btn ghost sm" id="exportPDF">Export as PDF</button>
+    </div>
   </section>
 
   <section class="view" id="view-foods">
@@ -695,7 +707,7 @@ function renderLog(){
     html+=`<div class="meal"><h3>${m}</h3>`;
     ms.forEach(e=>{const r=calcEntry(e),f=foodByName(e.food);
       const mTag={boiled:' · boiled',stirfried:' · stir-fried'}[e.method]||'';
-      html+=`<div class="entry"><div class="name"><b>${e.food}</b><span>${f1(e.qty)} ${f?UNIT_LABEL[f.unit]:''}${mTag} · P${f1(r.p)} C${f1(r.c)} F${f1(r.fat)}</span></div><div class="kcal">${fmt(r.cal)}<small>kcal</small></div><button class="del" data-id="${e.id}" aria-label="Remove">×</button></div>`;});
+      html+=`<div class="entry"><div class="name"><b>${e.food}</b><span>${f1(e.qty)} ${f?UNIT_LABEL[f.unit]:''}${mTag} · P${f1(r.p)} C${f1(r.c)} F${f1(r.fat)} Fi${f1(r.fi||0)}</span></div><div class="kcal">${fmt(r.cal)}<small>kcal</small></div><button class="del" data-id="${e.id}" aria-label="Remove">×</button></div>`;});
     html+=`</div>`;});
   wrap.innerHTML=html;
   wrap.querySelectorAll(".del").forEach(b=>b.onclick=()=>{state.log=state.log.filter(x=>x.id!=b.dataset.id);saveLog();renderLog();});
@@ -769,6 +781,88 @@ function switchTab(t){
     ai.style.height=h+'px';
     if(!chatReady)initChat();
   }
+}
+function exportPDF(){
+  const range=$("#pdfRange").value;
+  const today=todayStr();
+  let start=today;
+  if(range==='week'){const d=new Date(today+'T00:00:00');d.setDate(d.getDate()-6);start=localDateStr(d);}
+  else if(range==='month'){const d=new Date(today+'T00:00:00');d.setDate(1);start=localDateStr(d);}
+  else if(range==='all'){const dates=state.log.map(e=>e.date).sort();start=dates[0]||today;}
+  const entries=state.log.filter(e=>e.date>=start&&e.date<=today).sort((a,b)=>a.date.localeCompare(b.date)||['Breakfast','Lunch','Evening','Dinner'].indexOf(a.meal)-['Breakfast','Lunch','Evening','Dinner'].indexOf(b.meal));
+  if(!entries.length){toast("No data in that range");return;}
+  const byDate={};
+  entries.forEach(e=>{(byDate[e.date]=byDate[e.date]||{})[e.meal]=byDate[e.date][e.meal]||[];byDate[e.date][e.meal].push(e);});
+  const dates=Object.keys(byDate).sort();
+  let gCal=0,gP=0,gC=0,gF=0,gFi=0;
+  entries.forEach(e=>{const r=calcEntry(e);gCal+=r.cal;gP+=r.p;gC+=r.c;gF+=r.fat;gFi+=r.fi||0;});
+  const fmtDate=s=>{const d=new Date(s+'T00:00:00');return d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});};
+  const MEALS=['Breakfast','Lunch','Evening','Dinner'];
+  let rows='';
+  dates.forEach(date=>{
+    const de=Object.values(byDate[date]).flat();
+    let dCal=0,dP=0,dC=0,dF=0,dFi=0;
+    de.forEach(e=>{const r=calcEntry(e);dCal+=r.cal;dP+=r.p;dC+=r.c;dF+=r.fat;dFi+=r.fi||0;});
+    const over=dCal>state.settings.target;
+    rows+=`<div class="day"><div class="day-hd"><span>${fmtDate(date)}</span><span style="color:${over?'#c0392b':'#1C6940'}">${Math.round(dCal)} kcal${over?' ▲':''}</span></div><div class="day-body">`;
+    MEALS.forEach(meal=>{
+      const me=byDate[date][meal];if(!me||!me.length)return;
+      rows+=`<div class="meal-hd">${meal}</div>`;
+      me.forEach(e=>{
+        const r=calcEntry(e),fd=foodByName(e.food);
+        const unit=fd?UNIT_LABEL[fd.unit]:'';
+        const method={boiled:'boiled',stirfried:'stir-fried'}[e.method]||'';
+        rows+=`<div class="entry-row"><div class="e-name">${e.food}${e.fromRecipe?` <em>(${e.fromRecipe})</em>`:''}<span class="e-qty">${f1(e.qty)} ${unit}${method?' · '+method:''}</span></div><div class="e-macros">P ${f1(r.p)}g · C ${f1(r.c)}g · Fat ${f1(r.fat)}g · Fi ${f1(r.fi||0)}g</div><div class="e-cal">${Math.round(r.cal)} kcal</div></div>`;
+      });
+    });
+    rows+=`<div class="day-total"><div>P ${f1(dP)}g · C ${f1(dC)}g · Fat ${f1(dF)}g · Fibre ${f1(dFi)}g</div><div><b>${Math.round(dCal)}</b> / ${state.settings.target} kcal</div></div></div></div>`;
+  });
+  const label=range==='today'?`Daily Report — ${fmtDate(today)}`:`${fmtDate(start)} — ${fmtDate(today)}`;
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ledger — Food Log</title><style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;background:#fff;padding:32px 40px;font-size:13px;}
+  h1{font-size:26px;font-weight:800;color:#1C6940;letter-spacing:-.5px;}
+  .dot{color:#3DB86E;}
+  .sub{font-size:11.5px;color:#777;margin-top:3px;}
+  hr{border:none;border-top:2.5px solid #1C6940;margin:14px 0 20px;}
+  .summary{display:flex;gap:16px;background:#f2f7f4;border-radius:10px;padding:14px 18px;margin-bottom:24px;flex-wrap:wrap;}
+  .s-item label{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:#888;display:block;margin-bottom:2px;}
+  .s-item b{font-size:20px;font-weight:700;color:#1C6940;}
+  .s-item span{font-size:11px;color:#555;}
+  .day{margin-bottom:22px;border:1px solid #ddd;border-radius:9px;overflow:hidden;page-break-inside:avoid;}
+  .day-hd{background:#1C6940;color:#fff;padding:7px 14px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;}
+  .day-body{}
+  .meal-hd{background:#edf4f0;padding:5px 14px;font-size:10.5px;font-weight:700;color:#1C6940;text-transform:uppercase;letter-spacing:.07em;border-top:1px solid #d5e8dd;}
+  .entry-row{display:flex;align-items:center;padding:6px 14px;border-top:1px solid #f0f0f0;gap:8px;}
+  .e-name{flex:1;font-size:13px;font-weight:500;}
+  .e-name em{font-size:11px;color:#999;font-style:normal;}
+  .e-qty{display:block;font-size:11px;color:#999;font-weight:400;}
+  .e-macros{font-size:11px;color:#888;min-width:200px;text-align:right;}
+  .e-cal{font-size:13px;font-weight:700;color:#1C6940;min-width:70px;text-align:right;}
+  .day-total{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;background:#f9fdf9;border-top:1px solid #d5e8dd;font-size:12px;color:#555;}
+  .day-total b{font-size:15px;color:#1C6940;}
+  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:11px;color:#aaa;text-align:center;}
+  @media print{body{padding:16px 20px;}@page{margin:15mm;}}
+  </style></head><body>
+  <h1>Ledger<span class="dot">.</span></h1>
+  <div class="sub">${label} · Target ${state.settings.target} kcal/day · Generated ${new Date().toLocaleString('en-IN')}</div>
+  <hr/>
+  <div class="summary">
+    <div class="s-item"><label>Days logged</label><b>${dates.length}</b><span> days</span></div>
+    <div class="s-item"><label>Total calories</label><b>${Math.round(gCal)}</b><span> kcal</span></div>
+    <div class="s-item"><label>Avg per day</label><b>${Math.round(gCal/dates.length)}</b><span> kcal</span></div>
+    <div class="s-item"><label>Total protein</label><b>${Math.round(gP)}</b><span> g</span></div>
+    <div class="s-item"><label>Total carbs</label><b>${Math.round(gC)}</b><span> g</span></div>
+    <div class="s-item"><label>Total fat</label><b>${Math.round(gF)}</b><span> g</span></div>
+    <div class="s-item"><label>Total fibre</label><b>${Math.round(gFi)}</b><span> g</span></div>
+  </div>
+  ${rows}
+  <div class="footer">Ledger &nbsp;|&nbsp; ${new Date().toLocaleString('en-IN')} &nbsp;|&nbsp; ${entries.length} entries across ${dates.length} days</div>
+  </body></html>`;
+  const win=window.open('','_blank');
+  if(!win){toast("Allow pop-ups to export PDF");return;}
+  win.document.write(html);win.document.close();
+  win.addEventListener('load',()=>setTimeout(()=>win.print(),300));
 }
 function wireRiFoodAC(row,initFood,opts){
   opts=opts||{};
@@ -958,6 +1052,7 @@ function wire(){
   $("#setFloor").onchange=()=>{state.settings.floor=parseInt($("#setFloor").value)||1200;saveSettings();renderWeight();};
   $("#setPace").onchange=()=>{state.settings.pace=parseFloat($("#setPace").value);saveSettings();renderWeight();};
   $("#applyTarget").onclick=()=>{state.settings.target=parseInt($("#applyTarget").dataset.tgt);saveSettings();$("#setTarget").value=state.settings.target;renderLog();renderWeight();toast("Daily target updated");};
+  $("#exportPDF").onclick=exportPDF;
   $("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({foods:state.foods,log:state.log,weighins:state.weighins,settings:state.settings},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ledger-backup.json";a.click();};
   $("#importBtn").onclick=()=>$("#importFile").click();
   $("#importFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.foods)state.foods=d.foods;if(d.log)state.log=d.log;if(d.weighins)state.weighins=d.weighins;if(d.settings)state.settings={...state.settings,...d.settings};persist();renderFoodSelect();renderLog();renderFoods();renderWeight();toast("Data imported");}catch(err){toast("Couldn't read that file");}};r.readAsText(file);};
