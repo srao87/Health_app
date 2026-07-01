@@ -254,6 +254,21 @@
   /* pdf export bar */
   .export-bar{display:flex;gap:8px;align-items:center;padding:10px 14px 6px;}
   .export-bar select{flex:1;padding:9px 12px;border:1.5px solid var(--line);border-radius:12px;font-size:13px;background:var(--surface);color:var(--ink);font-family:inherit;}
+  /* ── meal plan ── */
+  .plan-seg{display:flex;gap:4px;margin-bottom:12px;}
+  .plan-seg button{flex:1;min-width:0;padding:7px 2px;border:1.5px solid var(--line);background:var(--surface-2);border-radius:10px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s;}
+  .plan-seg button.on{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .plan-meal-sec{margin-top:12px;}
+  .plan-meal-hd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .plan-meal-hd::after{content:'';flex:1;height:1px;background:var(--line);}
+  .plan-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface);border-radius:10px;margin-bottom:5px;box-shadow:var(--shadow);}
+  .plan-item-name{flex:1;font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .plan-item-qty{font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;flex-shrink:0;}
+  .plan-item-del{border:0;background:transparent;color:var(--line);font-size:18px;cursor:pointer;padding:2px 4px;border-radius:7px;transition:.15s;flex-shrink:0;}
+  .plan-item-del:hover{color:var(--coral);}
+  .plan-add-row{display:grid;grid-template-columns:1fr 72px auto;gap:6px;align-items:center;margin-top:6px;}
+  .plan-add-row input[type=number]{padding:8px 10px;font-size:13px;}
+  .plan-day-total{margin-top:10px;padding:8px 12px;background:var(--surface-2);border-radius:10px;font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;}
   @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important;}}
 </style>
 </head>
@@ -404,6 +419,13 @@
         <button class="btn" id="rcpSaveBtn">Save recipe</button>
       </div>
     </div>
+    <div class="card" style="margin-top:4px;">
+      <h2 class="sec" style="margin-top:2px;">Weekly Meal Plan</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.55;">Plan your meals for each day, then export a grocery list of everything you need to buy.</p>
+      <div class="plan-seg" id="planDaySeg"></div>
+      <div id="planDayContent"></div>
+      <button class="btn ghost sm" id="groceryExportBtn" style="margin-top:14px;width:100%;">Export Grocery List as PDF</button>
+    </div>
     <h2 class="sec">Food database</h2>
     <div id="foodList"></div>
   </section>
@@ -509,8 +531,10 @@ const SEED_FOODS = [
   ["Rajma Masala","g",1.25,0.065,0.18,0.035,0.05],
 ].map(([name,unit,cal,p,c,f,fi])=>({name,unit,cal,p,c,f,fi:fi||0,custom:false}));
 const UNIT_LABEL={g:"grams",ml:"ml",piece:"pieces"};
-let state={foods:[],log:[],weighins:[],settings:{target:1500,pace:0.75,floor:1300,kcalPerKg:7700},meal:"Breakfast"};
+let state={foods:[],log:[],weighins:[],settings:{target:1500,pace:0.75,floor:1300,kcalPerKg:7700},weekPlan:{},meal:"Breakfast"};
 let cookMethod="raw";
+let planDay='Mon';
+const PLAN_DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 /* ---------- supabase + auth ---------- */
 let sb=null, currentUser=null, wired=false;
@@ -576,7 +600,7 @@ async function persistNow(){
   if(!currentUser||!sb)return;
   setSync(true);
   try{
-    const payload={foods:state.foods,log:state.log,weighins:state.weighins,settings:state.settings};
+    const payload={foods:state.foods,log:state.log,weighins:state.weighins,settings:state.settings,weekPlan:state.weekPlan};
     const {error}=await sb.from("user_data").upsert({user_id:currentUser.id,data:payload,updated_at:new Date().toISOString()});
     if(error)throw error;
   }catch(e){toast("Sync failed — will retry");setTimeout(persist,4000);}
@@ -592,6 +616,7 @@ async function loadData(){
       if(d.log)state.log=d.log;
       if(d.weighins)state.weighins=d.weighins;
       if(d.settings)state.settings={...state.settings,...d.settings};
+      if(d.weekPlan)state.weekPlan=d.weekPlan;
     }else if(!data){
       await persistNow();
     }
@@ -765,12 +790,118 @@ function renderWeight(){
   wrap.innerHTML=`<table class="weeks"><thead><tr><th>Week</th><th>Avg wt</th><th>Avg cals</th><th>Δ kg</th><th>Maint.</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+/* ================= PLAN ================= */
+function renderPlanDay(day){
+  const MEALS=['Breakfast','Lunch','Evening','Dinner'];
+  const wrap=document.getElementById('planDayContent');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  let dayTotalCal=0;
+  MEALS.forEach(meal=>{
+    const entries=(state.weekPlan[day]&&state.weekPlan[day][meal])||[];
+    const sec=document.createElement('div');sec.className='plan-meal-sec';
+    let mealHtml=`<div class="plan-meal-hd">${meal}</div>`;
+    entries.forEach((item,idx)=>{
+      const fd=foodByName(item.food);
+      const unit=fd?UNIT_LABEL[fd.unit]:'';
+      const r=fd?calcEntry({food:item.food,qty:item.qty,method:'raw'}):{cal:0};
+      dayTotalCal+=r.cal;
+      mealHtml+=`<div class="plan-item"><div class="plan-item-name">${item.food}</div><div class="plan-item-qty">${f1(item.qty)} ${unit}</div><button class="plan-item-del" data-day="${day}" data-meal="${meal}" data-idx="${idx}" aria-label="Remove">×</button></div>`;
+    });
+    sec.innerHTML=mealHtml;
+    const addRow=document.createElement('div');
+    addRow.className='plan-add-row';
+    addRow.innerHTML=`<div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search food…"/><div class="ri-food-drop"></div><input type="hidden" class="ri-food"/></div><input type="number" class="plan-qty" inputmode="decimal" placeholder="qty" min="0" step="any"/><button class="btn ghost sm plan-add-btn">Add</button>`;
+    wireRiFoodAC(addRow,null,{filterFn:f=>true});
+    addRow.querySelector('.plan-add-btn').onclick=()=>{
+      const food=addRow.querySelector('.ri-food').value.trim();
+      const qty=parseFloat(addRow.querySelector('.plan-qty').value);
+      if(!food||!(qty>0)){toast('Enter food and quantity');return;}
+      if(!state.weekPlan[day])state.weekPlan[day]={};
+      if(!state.weekPlan[day][meal])state.weekPlan[day][meal]=[];
+      state.weekPlan[day][meal].push({food,qty});
+      persist();renderPlanDay(day);
+    };
+    sec.appendChild(addRow);
+    wrap.appendChild(sec);
+  });
+  wrap.querySelectorAll('.plan-item-del').forEach(b=>b.onclick=()=>{
+    const d=b.dataset.day,m=b.dataset.meal,i=parseInt(b.dataset.idx);
+    if(state.weekPlan[d]&&state.weekPlan[d][m])state.weekPlan[d][m].splice(i,1);
+    persist();renderPlanDay(day);
+  });
+  if(dayTotalCal>0){
+    const tot=document.createElement('div');tot.className='plan-day-total';
+    tot.innerHTML=`<span>Planned total</span><span style="font-family:'Space Mono',monospace;font-weight:700;color:var(--green-mid);">${fmt(Math.round(dayTotalCal))} kcal</span>`;
+    wrap.appendChild(tot);
+  }
+}
+function exportGroceryList(){
+  const MEALS=['Breakfast','Lunch','Evening','Dinner'];
+  const totals={};let hasPlan=false;
+  PLAN_DAYS.forEach(day=>{
+    MEALS.forEach(meal=>{
+      const items=(state.weekPlan[day]&&state.weekPlan[day][meal])||[];
+      items.forEach(item=>{
+        hasPlan=true;
+        if(!totals[item.food]){const fd=foodByName(item.food);totals[item.food]={qty:0,unit:fd?UNIT_LABEL[fd.unit]:'g'};}
+        totals[item.food].qty+=item.qty;
+      });
+    });
+  });
+  if(!hasPlan){toast('No meals planned yet');return;}
+  let ttRows='';
+  PLAN_DAYS.forEach(day=>{
+    const cells=MEALS.map(meal=>{
+      const items=(state.weekPlan[day]&&state.weekPlan[day][meal])||[];
+      if(!items.length)return'';
+      return`<b>${meal}:</b> ${items.map(i=>`${i.food} (${f1(i.qty)})`).join(', ')}`;
+    }).filter(Boolean);
+    if(!cells.length)return;
+    ttRows+=`<tr><td class="d-lbl">${day}</td><td>${cells.join('<br>')}</td></tr>`;
+  });
+  const grocRows=Object.entries(totals).sort((a,b)=>a[0].localeCompare(b[0])).map(([name,info])=>`<tr><td>${name}</td><td>${f1(info.qty)} ${info.unit}</td><td><input type="checkbox" class="chk"/></td></tr>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Grocery List</title><style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',Arial,sans-serif;padding:20px 28px;font-size:12px;color:#1a1a1a;}
+  h1{font-size:22px;font-weight:800;color:#1C6940;letter-spacing:-.5px;}
+  .dot{color:#3DB86E;}h2{font-size:12px;font-weight:700;color:#1C6940;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.06em;}
+  .sub{font-size:11px;color:#777;margin-top:2px;margin-bottom:10px;}
+  hr{border:none;border-top:2px solid #1C6940;margin:8px 0 12px;}
+  .tt{width:100%;border-collapse:collapse;margin-bottom:10px;}
+  .tt td{padding:4px 8px;border-bottom:1px solid #eee;vertical-align:top;font-size:12px;line-height:1.7;}
+  .d-lbl{font-weight:700;color:#1C6940;width:34px;white-space:nowrap;}
+  table.groc{width:100%;border-collapse:collapse;}
+  .groc th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:700;padding:5px 8px;border-bottom:2px solid #1C6940;}
+  .groc th:last-child{text-align:center;width:44px;}
+  .groc td{padding:6px 8px;border-bottom:1px solid #eee;font-size:12px;vertical-align:middle;}
+  .groc td:nth-child(2){font-family:monospace;color:#555;font-size:11px;white-space:nowrap;}
+  .groc td:last-child{text-align:center;}
+  .chk{width:15px;height:15px;cursor:pointer;}
+  tr:nth-child(even){background:#fafafa;}
+  .footer{margin-top:14px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:10px;color:#aaa;text-align:center;}
+  @media print{body{padding:10px 14px;}@page{margin:8mm;size:A4;}.chk{-webkit-appearance:checkbox;}}
+  </style></head><body>
+  <h1>Grocery List<span class="dot">.</span></h1>
+  <div class="sub">Weekly meal plan · Target ${state.settings.target} kcal/day · Generated ${new Date().toLocaleString('en-IN')}</div>
+  <hr/>
+  ${ttRows?`<h2>Meal Timetable</h2><table class="tt">${ttRows}</table>`:''}
+  <h2>Shopping List</h2>
+  <table class="groc"><thead><tr><th>Item</th><th>Amount needed</th><th>Got ✓</th></tr></thead><tbody>${grocRows}</tbody></table>
+  <div class="footer">Ledger · Weekly Grocery List · ${new Date().toLocaleDateString('en-IN')}</div>
+  </body></html>`;
+  const win=window.open('','_blank');
+  if(!win){toast('Allow pop-ups to export');return;}
+  win.document.write(html);win.document.close();
+  win.addEventListener('load',()=>setTimeout(()=>win.print(),300));
+}
+
 /* ================= EVENTS ================= */
 function switchTab(t){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   document.querySelectorAll("section.view").forEach(v=>v.classList.toggle("active",v.id==="view-"+t));
   if(t==="weight")renderWeight();
-  if(t==="foods")renderFoods();
+  if(t==="foods"){renderFoods();renderPlanDay(planDay);}
   if(t==="ai"){
     const hdr=document.querySelector('header.bar');
     const nav=document.querySelector('nav.tabs');
@@ -1052,6 +1183,16 @@ function wire(){
   $("#exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({foods:state.foods,log:state.log,weighins:state.weighins,settings:state.settings},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ledger-backup.json";a.click();};
   $("#importBtn").onclick=()=>$("#importFile").click();
   $("#importFile").onchange=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.foods)state.foods=d.foods;if(d.log)state.log=d.log;if(d.weighins)state.weighins=d.weighins;if(d.settings)state.settings={...state.settings,...d.settings};persist();renderFoodSelect();renderLog();renderFoods();renderWeight();toast("Data imported");}catch(err){toast("Couldn't read that file");}};r.readAsText(file);};
+  /* ---- meal plan ---- */
+  const planDaySeg=document.getElementById('planDaySeg');
+  PLAN_DAYS.forEach(d=>{
+    const btn=document.createElement('button');btn.textContent=d;btn.dataset.day=d;
+    if(d===planDay)btn.classList.add('on');
+    btn.onclick=()=>{planDaySeg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));btn.classList.add('on');planDay=d;renderPlanDay(d);};
+    planDaySeg.appendChild(btn);
+  });
+  document.getElementById('groceryExportBtn').onclick=exportGroceryList;
+  renderPlanDay(planDay);
   syncCfLabels();wireChatInput();
 }
 
