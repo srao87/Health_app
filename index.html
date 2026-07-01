@@ -150,12 +150,38 @@
   .toolbar{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
   h2.sec{font-family:'Bricolage Grotesque';font-weight:700;font-size:18px;letter-spacing:-.02em;margin:20px 0 12px;color:var(--ink);}
 
-  nav.tabs{position:fixed;bottom:0;left:0;right:0;max-width:540px;margin:0 auto;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);padding:8px 12px calc(8px + env(safe-area-inset-bottom));}
-  nav.tabs button{border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:11px;font-weight:600;padding:7px 4px;border-radius:14px;transition:.2s;}
-  nav.tabs button svg{width:22px;height:22px;}
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;max-width:540px;margin:0 auto;background:rgba(255,255,255,.88);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px calc(8px + env(safe-area-inset-bottom));}
+  nav.tabs button{border:0;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:10.5px;font-weight:600;padding:7px 2px;border-radius:14px;transition:.2s;}
+  nav.tabs button svg{width:21px;height:21px;}
   nav.tabs button.on{color:var(--green);background:var(--green-glow);}
   .toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;padding:11px 20px;border-radius:99px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:80;box-shadow:0 4px 18px rgba(0,0,0,.22);}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── AI chat screen ── */
+  #view-ai.active{display:flex;flex-direction:column;padding:0;}
+  .chat-msgs{flex:1;overflow-y:auto;padding:14px 14px 8px;display:flex;flex-direction:column;gap:12px;min-height:0;}
+  .msg-row{display:flex;align-items:flex-end;gap:8px;}
+  .msg-row.user{flex-direction:row-reverse;}
+  .bubble{max-width:82%;padding:11px 14px;font-size:14px;line-height:1.55;}
+  .bubble.ai{background:var(--surface);box-shadow:var(--shadow);border-radius:6px 18px 18px 18px;color:var(--ink);}
+  .bubble.user{background:linear-gradient(135deg,var(--green-mid),var(--green));color:#fff;border-radius:18px 18px 4px 18px;}
+  .bubble em{font-style:normal;opacity:.75;font-size:13px;}
+  .added-list{margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07);font-size:12.5px;color:var(--muted);line-height:1.7;}
+  .bubble.user .added-list{border-top-color:rgba(255,255,255,.2);color:rgba(255,255,255,.75);}
+  .typing-bubble{display:flex;gap:5px;padding:5px 2px;align-items:center;}
+  .typing-bubble span{width:7px;height:7px;border-radius:50%;background:var(--muted);display:block;animation:tdot 1.2s infinite ease-in-out;}
+  .typing-bubble span:nth-child(2){animation-delay:.18s;}
+  .typing-bubble span:nth-child(3){animation-delay:.36s;}
+  @keyframes tdot{0%,60%,100%{opacity:.25;transform:translateY(0);}30%{opacity:1;transform:translateY(-4px);}}
+  .ai-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--green-mid),var(--green));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 6px rgba(28,105,64,.25);}
+  .ai-av svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2;}
+  .chat-bar{background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);padding:10px 14px 12px;display:flex;gap:8px;align-items:flex-end;flex-shrink:0;}
+  .chat-bar textarea{flex:1;min-height:44px;max-height:130px;overflow-y:auto;resize:none;padding:11px 13px;border:1.5px solid var(--line);border-radius:13px;font-family:'Inter';font-size:14px;line-height:1.45;background:var(--surface-2);color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s;}
+  .chat-bar textarea:focus{border-color:var(--green-mid);box-shadow:0 0 0 3px rgba(37,125,78,.13);}
+  .chat-send{width:44px;height:44px;flex-shrink:0;border:0;border-radius:13px;background:linear-gradient(135deg,var(--green-mid),var(--green));color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(28,105,64,.25);transition:.15s;}
+  .chat-send:hover{filter:brightness(1.08);}
+  .chat-send:disabled{opacity:.5;cursor:default;filter:none;}
+  .chat-send svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2.5;}
 
   .gate{position:fixed;inset:0;background:var(--paper);z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;}
   .gate .box{max-width:380px;width:100%;background:var(--surface);border-radius:26px;box-shadow:var(--shadow-lg);padding:32px 28px;}
@@ -294,13 +320,6 @@
       </div>
       <button class="recipe-toggle" id="recipeToggle">+ Log multiple foods at once</button>
     </div>
-    <div class="card">
-      <label class="field">AI meal assistant</label>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 12px;line-height:1.5;">Describe your meals in plain English and the assistant will fill in your log automatically.</p>
-      <textarea id="aiText" placeholder="e.g. Breakfast: 1 boiled egg + 250ml coffee. Lunch: 3 chapathi, 350ml buttermilk. Dinner: 8 piece momos."></textarea>
-      <button class="btn dark" id="aiBtn" style="margin-top:10px;">Parse &amp; add to log</button>
-      <div id="aiMsg" style="font-size:13px;margin-top:10px;min-height:16px;line-height:1.4;"></div>
-    </div>
     <div id="entryList"></div>
   </section>
 
@@ -387,10 +406,22 @@
     </div>
   </section>
 
+  <!-- ===== AI CHAT SCREEN ===== -->
+  <section class="view" id="view-ai" style="height:calc(100vh - 130px);">
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-bar">
+      <textarea id="chatInput" placeholder="Tell me what you ate…" rows="1"></textarea>
+      <button class="chat-send" id="chatSend" aria-label="Send">
+        <svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+  </section>
+
   <nav class="tabs">
     <button data-tab="log" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3h14a1 1 0 0 1 1 1v16l-4-2-4 2-4-2-4 2V4a1 1 0 0 1 1-1Z"/><path d="M9 8h6M9 12h6"/></svg>Log</button>
     <button data-tab="foods"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 3v18M4 8h6a3 3 0 0 0 0-6"/><path d="M18 3c-1.5 2-2 4-2 6s.5 4 2 6m0 0v3"/></svg>Foods</button>
     <button data-tab="weight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><path d="M12 12l2.5-2.5"/></svg>Weight</button>
+    <button data-tab="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/><circle cx="19" cy="19" r="2"/><circle cx="5" cy="19" r="2"/></svg>AI</button>
   </nav>
 </div>
 <div class="toast" id="toast"></div>
@@ -687,7 +718,9 @@ function renderWeight(){
 function switchTab(t){
   document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   document.querySelectorAll("section.view").forEach(v=>v.classList.toggle("active",v.id==="view-"+t));
-  if(t==="weight")renderWeight();if(t==="foods")renderFoods();
+  if(t==="weight")renderWeight();
+  if(t==="foods")renderFoods();
+  if(t==="ai"){if(!chatReady)initChat();}
 }
 function wire(){
   $("#logDate").value=todayStr();$("#wDate").value=todayStr();$("#logDate").onchange=renderLog;
@@ -816,7 +849,7 @@ function wire(){
     }catch(e){msg.style.color="var(--coral)";msg.textContent="Error: "+e.message;}
     finally{$("#aiBtn").disabled=false;}
   };
-  syncCfLabels();
+  syncCfLabels();wireChatInput();
 }
 
 /* ================= AI ASSISTANT ================= */
@@ -830,12 +863,12 @@ Nutrition storage format (per 1 unit):
 - unit "piece": cal/p/c/f are for one whole piece
 
 Return ONLY this JSON (no markdown, no explanation):
-{"entries":[{"meal":"Breakfast|Lunch|Evening|Dinner|Dessert","food":"food name","qty":number}],"new_foods":[{"name":"food name","unit":"g|ml|piece","cal":number,"p":number,"c":number,"f":number}]}
+{"entries":[{"meal":"Breakfast|Lunch|Evening|Dinner","food":"food name","qty":number}],"new_foods":[{"name":"food name","unit":"g|ml|piece","cal":number,"p":number,"c":number,"f":number}]}
 
 Rules:
 1. Match foods to the known list by name (fuzzy ok). Use the exact name from the list.
 2. Unknown foods go in "new_foods" with estimated nutrition, then also appear in "entries".
-3. Meal mapping: breakfast/morning→Breakfast, lunch→Lunch, evening/snack→Evening, dinner/night→Dinner, dessert/sweet→Dessert.
+3. Meal mapping: breakfast/morning→Breakfast, lunch→Lunch, evening/snack→Evening, dinner/night→Dinner. Map sweets/desserts to Dinner.
 4. qty uses the food's unit (pieces for piece-foods, grams for g-foods, ml for ml-foods).
 
 Known foods: ${foodList}
@@ -854,6 +887,75 @@ ${text}`;
   }
   const data = await res.json();
   return JSON.parse(data.choices[0].message.content.trim());
+}
+
+/* ================= AI CHAT ================= */
+let chatMsgs=[],chatReady=false;
+const escHtml=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+const aiAvatarHTML=`<div class="ai-av"><svg viewBox="0 0 24 24"><path d="M12 2l2 5h5l-4 3 1.5 5L12 12l-4.5 3L9 10 5 7h5z"/></svg></div>`;
+
+function initChat(){
+  chatReady=true;
+  if(!chatMsgs.length){
+    chatMsgs.push({role:'ai',html:`Hi! Tell me what you ate and I'll add it to today's log.<br><br><em>Try: "Breakfast 2 boiled eggs and 110ml milk coffee. Lunch 3 chapathi and 350ml protein buttermilk."</em>`});
+    renderChatMsgs();
+  }
+  $("#chatInput").focus();
+}
+
+function renderChatMsgs(){
+  const wrap=$("#chatMsgs");
+  wrap.innerHTML=chatMsgs.map(m=>{
+    if(m.role==='ai') return `<div class="msg-row">${aiAvatarHTML}<div class="bubble ai">${m.html}</div></div>`;
+    return `<div class="msg-row user"><div class="bubble user">${m.html}</div></div>`;
+  }).join('');
+  scrollChat();
+}
+
+function scrollChat(){const w=$("#chatMsgs");if(w)w.scrollTop=w.scrollHeight;}
+
+function showTypingDots(){
+  const d=document.createElement('div');d.className='msg-row';d.id='typingRow';
+  d.innerHTML=`${aiAvatarHTML}<div class="bubble ai"><div class="typing-bubble"><span></span><span></span><span></span></div></div>`;
+  $("#chatMsgs").appendChild(d);scrollChat();
+}
+function hideTypingDots(){const t=document.getElementById('typingRow');if(t)t.remove();}
+
+async function sendChat(){
+  const input=$("#chatInput");
+  const text=input.value.trim();if(!text)return;
+  input.value='';input.style.height='';
+  chatMsgs.push({role:'user',html:escHtml(text)});
+  renderChatMsgs();showTypingDots();
+  $("#chatSend").disabled=true;
+  try{
+    const {entries=[],new_foods=[]}=await parseWithAI(text);
+    new_foods.forEach(f=>{if(!foodByName(f.name))state.foods.push({...f,custom:true});});
+    const date=$("#logDate").value;
+    entries.forEach(e=>{state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date,meal:e.meal,food:e.food,qty:e.qty,method:e.method||'raw'});});
+    persist();renderFoodSelect();renderLog();renderQuickPicks();
+    hideTypingDots();
+    if(entries.length){
+      const list=entries.map(e=>{const f=foodByName(e.food);return `${e.food} · ${e.qty}${f?UNIT_LABEL[f.unit]:''}`;}).join('<br>');
+      const newFoodNote=new_foods.length?`<br><em>+${new_foods.length} new food${new_foods.length>1?'s':''} added to your database</em>`:'';
+      chatMsgs.push({role:'ai',html:`Done! Added ${entries.length} item${entries.length>1?'s':''} to your <b>${entries[0].meal}</b> log:<div class="added-list">${list}</div>${newFoodNote}`});
+    } else {
+      chatMsgs.push({role:'ai',html:`Hmm, I couldn't find any food in that. Try describing a meal like:<br><em>"Lunch: 3 chapathi and 350ml buttermilk"</em>`});
+    }
+  } catch(e){
+    hideTypingDots();
+    chatMsgs.push({role:'ai',html:`Something went wrong: ${escHtml(e.message)}`});
+  }
+  $("#chatSend").disabled=false;
+  renderChatMsgs();
+}
+
+function wireChatInput(){
+  const input=$("#chatInput");
+  const autoResize=()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,130)+'px';};
+  input.addEventListener('input',autoResize);
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}});
+  $("#chatSend").onclick=sendChat;
 }
 
 boot();
