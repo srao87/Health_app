@@ -818,29 +818,28 @@ function exportPDF(){
   const label=range==='today'?`Daily Report — ${fmtDate(today)}`:`${fmtDate(start)} — ${fmtDate(today)}`;
   const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ledger — Food Log</title><style>
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;background:#fff;padding:32px 40px;font-size:13px;}
-  h1{font-size:26px;font-weight:800;color:#1C6940;letter-spacing:-.5px;}
+  body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;background:#fff;padding:18px 22px;font-size:12px;}
+  h1{font-size:22px;font-weight:800;color:#1C6940;letter-spacing:-.5px;display:inline;}
   .dot{color:#3DB86E;}
-  .sub{font-size:11.5px;color:#777;margin-top:3px;}
-  hr{border:none;border-top:2.5px solid #1C6940;margin:14px 0 20px;}
-  .summary{display:flex;gap:16px;background:#f2f7f4;border-radius:10px;padding:14px 18px;margin-bottom:24px;flex-wrap:wrap;}
-  .s-item label{font-size:9.5px;text-transform:uppercase;letter-spacing:.07em;color:#888;display:block;margin-bottom:2px;}
-  .s-item b{font-size:20px;font-weight:700;color:#1C6940;}
-  .s-item span{font-size:11px;color:#555;}
-  .day{margin-bottom:22px;border:1px solid #ddd;border-radius:9px;overflow:hidden;page-break-inside:avoid;}
-  .day-hd{background:#1C6940;color:#fff;padding:7px 14px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;}
-  .day-body{}
-  .meal-hd{background:#edf4f0;padding:5px 14px;font-size:10.5px;font-weight:700;color:#1C6940;text-transform:uppercase;letter-spacing:.07em;border-top:1px solid #d5e8dd;}
-  .entry-row{display:flex;align-items:center;padding:6px 14px;border-top:1px solid #f0f0f0;gap:8px;}
-  .e-name{flex:1;font-size:13px;font-weight:500;}
-  .e-name em{font-size:11px;color:#999;font-style:normal;}
-  .e-qty{display:block;font-size:11px;color:#999;font-weight:400;}
-  .e-macros{font-size:11px;color:#888;min-width:200px;text-align:right;}
-  .e-cal{font-size:13px;font-weight:700;color:#1C6940;min-width:70px;text-align:right;}
-  .day-total{display:flex;justify-content:space-between;align-items:center;padding:7px 14px;background:#f9fdf9;border-top:1px solid #d5e8dd;font-size:12px;color:#555;}
-  .day-total b{font-size:15px;color:#1C6940;}
-  .footer{margin-top:24px;padding-top:12px;border-top:1px solid #e0e0e0;font-size:11px;color:#aaa;text-align:center;}
-  @media print{body{padding:16px 20px;}@page{margin:15mm;}}
+  .sub{font-size:11px;color:#777;margin-top:2px;margin-bottom:8px;}
+  hr{border:none;border-top:2px solid #1C6940;margin:8px 0 10px;}
+  .summary{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;background:#f2f7f4;border-radius:8px;padding:8px 12px;margin-bottom:12px;}
+  .s-item label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#888;display:block;margin-bottom:1px;}
+  .s-item b{font-size:16px;font-weight:700;color:#1C6940;display:block;line-height:1.1;}
+  .s-item span{font-size:10px;color:#555;}
+  .day{margin-bottom:8px;border:1px solid #ddd;border-radius:7px;overflow:hidden;}
+  .day-hd{background:#1C6940;color:#fff;padding:5px 12px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;}
+  .meal-hd{background:#edf4f0;padding:3px 12px;font-size:10px;font-weight:700;color:#1C6940;text-transform:uppercase;letter-spacing:.06em;border-top:1px solid #d5e8dd;}
+  .entry-row{display:flex;align-items:baseline;padding:4px 12px;border-top:1px solid #f0f0f0;gap:8px;}
+  .e-name{flex:1;font-size:12px;font-weight:500;}
+  .e-name em{font-size:10px;color:#999;font-style:normal;}
+  .e-qty{font-size:10px;color:#999;font-weight:400;margin-left:5px;}
+  .e-macros{font-size:10px;color:#888;min-width:190px;text-align:right;}
+  .e-cal{font-size:12px;font-weight:700;color:#1C6940;min-width:58px;text-align:right;}
+  .day-total{display:flex;justify-content:space-between;align-items:center;padding:5px 12px;background:#f9fdf9;border-top:1px solid #d5e8dd;font-size:11px;color:#555;}
+  .day-total b{font-size:13px;color:#1C6940;}
+  .footer{margin-top:10px;padding-top:8px;border-top:1px solid #e0e0e0;font-size:10px;color:#aaa;text-align:center;}
+  @media print{body{padding:8px 12px;}@page{margin:8mm;size:A4;}}
   </style></head><body>
   <h1>Ledger<span class="dot">.</span></h1>
   <div class="sub">${label} · Target ${state.settings.target} kcal/day · Generated ${new Date().toLocaleString('en-IN')}</div>
