@@ -66,6 +66,12 @@
   .quickpicks{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;}
   .qp{border:1px solid var(--line);background:var(--surface-2);border-radius:20px;padding:5px 11px;font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;transition:.15s;white-space:nowrap;}
   .qp:hover{background:var(--green);color:#fff;border-color:var(--green);}
+  .recipe-toggle{border:0;background:transparent;color:var(--green);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;margin-bottom:8px;display:block;}
+  .recipe-row{display:grid;grid-template-columns:1fr 90px auto;gap:6px;align-items:center;margin-bottom:7px;}
+  .recipe-row select,.recipe-row input{padding:9px 10px;font-size:13px;}
+  .recipe-row .runit{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;white-space:nowrap;}
+  .recipe-row .rdel{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 5px;border-radius:7px;}
+  .recipe-row .rdel:hover{color:var(--coral);background:var(--surface-2);}
   .formrow{display:grid;gap:10px;}
   .qtywrap{position:relative;}
   .qtywrap .unit{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);font-family:'Space Mono',monospace;pointer-events:none;}
@@ -230,12 +236,21 @@
         <button data-meal="Evening">Evening</button><button data-meal="Dinner">Dinner</button><button data-meal="Dessert">Dessert</button>
       </div>
       <div id="quickpicks" class="quickpicks" style="display:none;"></div>
-      <div class="formrow">
+      <!-- single-food mode -->
+      <div id="singleMode" class="formrow">
         <div><label class="field">Food</label><select id="foodSelect"></select></div>
         <div id="cookRow" style="display:none;"><label class="field">Cooking method</label><div class="seg" id="cookSeg"><button data-cook="raw" class="on">Raw</button><button data-cook="boiled">Boiled</button><button data-cook="stirfried">Stir-fried</button></div></div>
         <div><label class="field">Quantity</label><div class="qtywrap"><input type="number" id="qty" inputmode="decimal" placeholder="0" min="0" step="any" /><span class="unit" id="qtyUnit">grams</span></div></div>
         <button class="btn" id="addBtn">Add to log</button>
       </div>
+      <!-- recipe mode -->
+      <div id="recipeMode" style="display:none;">
+        <label class="field" style="margin-bottom:8px;">Recipe ingredients</label>
+        <div id="recipeRows"></div>
+        <button class="btn ghost sm" id="addIngBtn" style="margin-bottom:10px;">+ Add ingredient</button>
+        <button class="btn" id="logRecipeBtn">Log all ingredients</button>
+      </div>
+      <button class="recipe-toggle" id="recipeToggle">+ Log as recipe (multiple ingredients)</button>
     </div>
     <div class="card">
       <label class="field">AI meal assistant</label>
@@ -598,6 +613,37 @@ function wire(){
     state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date:$("#logDate").value,meal:state.meal,food,qty,method:cookMethod});
     saveLog();$("#qty").value="";renderLog();renderQuickPicks();toast("Added");};
   $("#qty").addEventListener("keydown",e=>{if(e.key==="Enter")$("#addBtn").click();});
+
+  /* ---- recipe mode ---- */
+  let recipeOpen=false;
+  function foodOptionsHTML(){return state.foods.map(f=>`<option value="${f.name.replace(/"/g,'&quot;')}">${f.name}</option>`).join("");}
+  function addRecipeRow(name='',qty=''){
+    const row=document.createElement("div");row.className="recipe-row";
+    const f=name?foodByName(name):state.foods[0];
+    row.innerHTML=`<select class="ri-food">${foodOptionsHTML()}</select><input type="number" class="ri-qty" inputmode="decimal" placeholder="qty" min="0" step="any" value="${qty}" /><span class="runit">${f?UNIT_LABEL[f.unit]:''}</span><button class="rdel" aria-label="Remove">×</button>`;
+    if(name)row.querySelector(".ri-food").value=name;
+    row.querySelector(".ri-food").onchange=function(){const fd=foodByName(this.value);row.querySelector(".runit").textContent=fd?UNIT_LABEL[fd.unit]:'';}
+    row.querySelector(".rdel").onclick=()=>row.remove();
+    $("#recipeRows").appendChild(row);
+  }
+  $("#recipeToggle").onclick=()=>{
+    recipeOpen=!recipeOpen;
+    $("#singleMode").style.display=recipeOpen?"none":"";
+    $("#recipeMode").style.display=recipeOpen?"":"none";
+    $("#recipeToggle").textContent=recipeOpen?"← Back to single food":"+ Log as recipe (multiple ingredients)";
+    if(recipeOpen&&!$("#recipeRows").children.length){addRecipeRow();addRecipeRow();}
+  };
+  $("#addIngBtn").onclick=()=>addRecipeRow();
+  $("#logRecipeBtn").onclick=()=>{
+    const rows=[...$("#recipeRows").querySelectorAll(".recipe-row")];
+    const entries=rows.map(r=>({food:r.querySelector(".ri-food").value,qty:parseFloat(r.querySelector(".ri-qty").value)})).filter(e=>e.food&&e.qty>0);
+    if(!entries.length){toast("Add at least one ingredient with a quantity");return;}
+    const date=$("#logDate").value;
+    entries.forEach(e=>state.log.push({id:Date.now()+""+Math.floor(Math.random()*999),date,meal:state.meal,food:e.food,qty:e.qty,method:'raw'}));
+    saveLog();renderLog();renderQuickPicks();
+    toast(`Logged ${entries.length} ingredient${entries.length>1?"s":""}`);
+    $("#recipeRows").innerHTML="";addRecipeRow();addRecipeRow();
+  };
   $("#cfUnitSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cfUnitSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cfUnit=b.dataset.u;syncCfLabels();});
   $("#cfAdd").onclick=()=>{const name=$("#cfName").value.trim();if(!name){toast("Name your food");return;}if(foodByName(name)){toast("That name already exists");return;}
     const div=cfUnit==='piece'?1:100;
