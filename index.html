@@ -55,15 +55,16 @@
   .meter{height:7px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden;}
   .meter>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green-bright),#5EDA90);transition:width .6s cubic-bezier(.2,.7,.2,1);}
   .meter.over>i{background:linear-gradient(90deg,#E0A030,#FF6B50);}
-  .macros{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;}
-  .macro{background:rgba(255,255,255,.07);border-radius:13px;padding:10px 12px;}
-  .macro .lab{display:flex;justify-content:space-between;font-size:10px;color:rgba(255,255,255,.45);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
-  .macro .val{font-family:'Space Mono',monospace;font-weight:700;color:#fff;font-size:15px;}
-  .macro .track{height:4px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:8px;}
+  .macros{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:14px;}
+  .macro{background:rgba(255,255,255,.07);border-radius:11px;padding:8px 9px;}
+  .macro .lab{display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.45);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;}
+  .macro .val{font-family:'Space Mono',monospace;font-weight:700;color:#fff;font-size:13px;}
+  .macro .track{height:3px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden;margin-top:6px;}
   .macro .track>i{display:block;height:100%;border-radius:99px;transition:width .5s ease;}
   .macro.p .track>i{background:#3DB86E;}
   .macro.c .track>i{background:#E0A030;}
   .macro.f .track>i{background:#E06040;}
+  .macro.fi .track>i{background:#4ECDC4;}
 
   label.field{display:block;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
   select,input[type=number],input[type=text],input[type=email],textarea{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:13px;background:var(--surface-2);font-family:'Inter';font-size:15px;color:var(--ink);outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s,box-shadow .15s;}
@@ -128,7 +129,7 @@
   .foodcard .pcf{display:flex;gap:6px;font-family:'Space Mono',monospace;font-size:11px;}
   .foodcard .pcf i{font-style:normal;display:flex;flex-direction:column;align-items:center;line-height:1.3;background:var(--surface-2);border-radius:8px;padding:4px 8px;}
   .foodcard .pcf i u{text-decoration:none;font-size:9px;color:var(--muted);}
-  .pc-p{color:var(--protein);}.pc-c{color:var(--carbs);}.pc-f{color:var(--fat);}
+  .pc-p{color:var(--protein);}.pc-c{color:var(--carbs);}.pc-f{color:var(--fat);}.pc-fi{color:#2CB5AC;}
   .foodcard .del{border:0;background:transparent;color:var(--line);font-size:18px;cursor:pointer;padding:2px 5px;transition:.15s;}
   .foodcard .del:hover{color:var(--coral);}
 
@@ -318,6 +319,7 @@
         <div class="macro p"><div class="lab"><span>Protein</span><span class="val" id="pVal">0g</span></div><div class="track"><i id="pBar" style="width:0%"></i></div></div>
         <div class="macro c"><div class="lab"><span>Carbs</span><span class="val" id="cVal">0g</span></div><div class="track"><i id="cBar" style="width:0%"></i></div></div>
         <div class="macro f"><div class="lab"><span>Fat</span><span class="val" id="fVal">0g</span></div><div class="track"><i id="fBar" style="width:0%"></i></div></div>
+        <div class="macro fi"><div class="lab"><span>Fibre</span><span class="val" id="fiVal">0g</span></div><div class="track"><i id="fiBar" style="width:0%"></i></div></div>
       </div>
     </div>
     <div class="card">
@@ -372,6 +374,7 @@
           <div><label class="field" id="lblPro">Protein / 100g</label><input type="number" id="cfPro" inputmode="decimal" placeholder="0" /></div>
           <div><label class="field" id="lblCarb">Carbs / 100g</label><input type="number" id="cfCarb" inputmode="decimal" placeholder="0" /></div>
           <div><label class="field" id="lblFat">Fat / 100g</label><input type="number" id="cfFat" inputmode="decimal" placeholder="0" /></div>
+          <div><label class="field" id="lblFib">Fibre / 100g</label><input type="number" id="cfFib" inputmode="decimal" placeholder="0" /></div>
         </div>
         <button class="btn" id="cfAdd">Save food</button>
       </div>
@@ -466,33 +469,33 @@ const SUPABASE_ANON_KEY = "sb_publishable_LIWlkhxJaf_XkyyiAQoQhw_678vBSDx";
 
 /* ---------- seed + state ---------- */
 const SEED_FOODS = [
-  /* ── staples ── */
-  ["Whole Boiled Egg","piece",78,6.3,0.6,5.3],["Egg White","piece",17,3.6,0.2,0.1],
-  ["Low-Fat Milk","ml",0.42,0.034,0.05,0.01],["Whole Wheat Chapathi","piece",85,3,18,0.5],
-  ["Mixed Veg Sabzi","g",1.0,0.02,0.09,0.06],["Low-Fat Buttermilk","ml",0.2,0.01,0.025,0.005],
-  ["Black Coffee","ml",0.02,0.001,0,0],["Roasted Makhana","g",3.5,0.1,0.77,0.01],
-  ["Cooked Basmati Rice","g",1.3,0.027,0.28,0.003],["Chicken Breast (Raw)","g",1.2,0.225,0,0.026],
-  ["Tomato & Onion Base","g",0.4,0.01,0.08,0.005],["Boiled Sweet Corn","g",0.96,0.034,0.21,0.015],
-  ["Cooking Oil","ml",9,0,0,1],["Low-Fat Greek Yogurt","g",0.6,0.1,0.036,0.007],
-  ["Honey","g",3.0,0.003,0.82,0],["Mixed Berries","g",0.5,0.01,0.12,0.003],
-  ["Classic Cream Kunafa","piece",450,5,50,24],
+  /* ── staples ──                              name             unit   cal     p       c      f      fi */
+  ["Whole Boiled Egg","piece",78,6.3,0.6,5.3,0],["Egg White","piece",17,3.6,0.2,0.1,0],
+  ["Low-Fat Milk","ml",0.42,0.034,0.05,0.01,0],["Whole Wheat Chapathi","piece",85,3,18,0.5,2],
+  ["Mixed Veg Sabzi","g",1.0,0.02,0.09,0.06,0.02],["Low-Fat Buttermilk","ml",0.2,0.01,0.025,0.005,0],
+  ["Black Coffee","ml",0.02,0.001,0,0,0],["Roasted Makhana","g",3.5,0.1,0.77,0.01,0.005],
+  ["Cooked Basmati Rice","g",1.3,0.027,0.28,0.003,0.004],["Chicken Breast (Raw)","g",1.2,0.225,0,0.026,0],
+  ["Tomato & Onion Base","g",0.4,0.01,0.08,0.005,0.015],["Boiled Sweet Corn","g",0.96,0.034,0.21,0.015,0.02],
+  ["Cooking Oil","ml",9,0,0,1,0],["Low-Fat Greek Yogurt","g",0.6,0.1,0.036,0.007,0],
+  ["Honey","g",3.0,0.003,0.82,0,0.002],["Mixed Berries","g",0.5,0.01,0.12,0.003,0.02],
+  ["Classic Cream Kunafa","piece",450,5,50,24,2],
   /* ── drinks ── */
-  ["Milk Coffee (Homemade)","ml",0.37,0.019,0.029,0.020],
-  ["Protein Buttermilk","ml",0.26,0.029,0.025,0.003],
+  ["Milk Coffee (Homemade)","ml",0.37,0.019,0.029,0.020,0],
+  ["Protein Buttermilk","ml",0.26,0.029,0.025,0.003,0],
   /* ── snacks & street food ── */
-  ["Rava Vada (Small)","piece",165,4,22,7],
-  ["Chicken Shawarma Jumbo Roll","piece",750,50,55,30],
+  ["Rava Vada (Small)","piece",165,4,22,7,1],
+  ["Chicken Shawarma Jumbo Roll","piece",750,50,55,30,3],
   /* ── sweets & treats ── */
-  ["Cadbury Perk Bar","piece",107,1.4,14.2,5.1],
-  ["Magnum Almond Ice Cream","piece",280,4,26,17],
-  ["Bournville Dark Chocolate (2 cubes)","piece",46,0.5,5.5,3.0],
+  ["Cadbury Perk Bar","piece",107,1.4,14.2,5.1,0.3],
+  ["Magnum Almond Ice Cream","piece",280,4,26,17,1],
+  ["Bournville Dark Chocolate (2 cubes)","piece",46,0.5,5.5,3.0,0.7],
   /* ── dairy ── */
-  ["Low-Fat Flavored Yogurt","g",0.65,0.045,0.11,0.010],
+  ["Low-Fat Flavored Yogurt","g",0.65,0.045,0.11,0.010,0],
   /* ── eggs & mains ── */
-  ["Egg Omelette (2 eggs)","piece",165,12,1,13],
-  ["Pepper Chicken Fry","g",1.80,0.220,0.04,0.090],
-  ["Rajma Masala","g",1.25,0.065,0.18,0.035],
-].map(([name,unit,cal,p,c,f])=>({name,unit,cal,p,c,f,custom:false}));
+  ["Egg Omelette (2 eggs)","piece",165,12,1,13,0],
+  ["Pepper Chicken Fry","g",1.80,0.220,0.04,0.090,0],
+  ["Rajma Masala","g",1.25,0.065,0.18,0.035,0.05],
+].map(([name,unit,cal,p,c,f,fi])=>({name,unit,cal,p,c,f,fi:fi||0,custom:false}));
 const UNIT_LABEL={g:"grams",ml:"ml",piece:"pieces"};
 let state={foods:[],log:[],weighins:[],settings:{target:1500,pace:0.75,floor:1300,kcalPerKg:7700},meal:"Breakfast"};
 let cookMethod="raw";
@@ -669,21 +672,21 @@ function updateRcpLogPanel(f){
 }
 const dayEntries=date=>state.log.filter(e=>e.date===date);
 function calcEntry(e){
-  const f=foodByName(e.food);if(!f)return{cal:0,p:0,c:0,fat:0};
+  const f=foodByName(e.food);if(!f)return{cal:0,p:0,c:0,fat:0,fi:0};
   const factor=f.unit==='g'?getCookFactor(e.food,e.method||'raw'):1;
   const oilG=f.unit==='g'&&e.method==='stirfried'?e.qty*0.05:0;
-  return{cal:f.cal*e.qty*factor+oilG*9,p:f.p*e.qty*factor,c:f.c*e.qty*factor,fat:f.f*e.qty*factor+oilG};
+  return{cal:f.cal*e.qty*factor+oilG*9,p:f.p*e.qty*factor,c:f.c*e.qty*factor,fat:f.f*e.qty*factor+oilG,fi:(f.fi||0)*e.qty};
 }
 function renderLog(){
   const date=$("#logDate").value;const entries=dayEntries(date);
-  let tCal=0,tP=0,tC=0,tF=0;entries.forEach(e=>{const r=calcEntry(e);tCal+=r.cal;tP+=r.p;tC+=r.c;tF+=r.fat;});
+  let tCal=0,tP=0,tC=0,tF=0,tFi=0;entries.forEach(e=>{const r=calcEntry(e);tCal+=r.cal;tP+=r.p;tC+=r.c;tF+=r.fat;tFi+=r.fi||0;});
   const target=state.settings.target,remain=target-tCal,over=remain<0;
   const rn=$("#remainNum");rn.innerHTML=`${over?"+"+fmt(-remain):fmt(remain)}<small>${over?"kcal over target":"kcal left today"}</small>`;rn.classList.toggle("over",over);
   $("#gTarget").textContent=fmt(target);$("#gEaten").textContent=fmt(tCal);
   const meter=$("#calMeter");meter.classList.toggle("over",over);meter.querySelector("i").style.width=Math.min(100,(tCal/target)*100)+"%";
-  const pGoal=(target*0.30)/4,cGoal=(target*0.40)/4,fGoal=(target*0.30)/9;
-  $("#pVal").textContent=f1(tP)+"g";$("#cVal").textContent=f1(tC)+"g";$("#fVal").textContent=f1(tF)+"g";
-  $("#pBar").style.width=Math.min(100,tP/pGoal*100)+"%";$("#cBar").style.width=Math.min(100,tC/cGoal*100)+"%";$("#fBar").style.width=Math.min(100,tF/fGoal*100)+"%";
+  const pGoal=(target*0.30)/4,cGoal=(target*0.40)/4,fGoal=(target*0.30)/9,fiGoal=25;
+  $("#pVal").textContent=f1(tP)+"g";$("#cVal").textContent=f1(tC)+"g";$("#fVal").textContent=f1(tF)+"g";$("#fiVal").textContent=f1(tFi)+"g";
+  $("#pBar").style.width=Math.min(100,tP/pGoal*100)+"%";$("#cBar").style.width=Math.min(100,tC/cGoal*100)+"%";$("#fBar").style.width=Math.min(100,tF/fGoal*100)+"%";$("#fiBar").style.width=Math.min(100,tFi/fiGoal*100)+"%";
   const wrap=$("#entryList");
   if(!entries.length){wrap.innerHTML=`<div class="empty"><b>Nothing logged for this day yet.</b>Pick a meal, choose a food, type the amount, and tap Add.</div>`;return;}
   const order=["Breakfast","Lunch","Evening","Dinner","Dessert"];let html="";
@@ -706,13 +709,14 @@ function renderFoods(){
     const badge=f.isRecipe?`<span class="recipe-badge">recipe</span>`:'';
     const detail=f.isRecipe?`${f.ingredients?f.ingredients.length:0} ingredients${f.marinade?' · marinated':''}`:
       `per ${f.unit==='piece'?'piece':'1 '+f.unit} · ${fmt(f.cal*(f.unit==='piece'?1:100))} kcal ${f.unit==='piece'?'':'/100'+f.unit}`;
-    const pcf=f.isRecipe?`<div class="pcf"><i class="pc-p">${fmt(f.cal)}<u>kcal</u></i><i class="pc-p">${f1(f.p)}<u>P</u></i><i class="pc-c">${f1(f.c)}<u>C</u></i><i class="pc-f">${f1(f.f)}<u>F</u></i></div>`:
-      `<div class="pcf"><i class="pc-p">${f1(f.p*(f.unit==='piece'?1:100))}<u>P</u></i><i class="pc-c">${f1(f.c*(f.unit==='piece'?1:100))}<u>C</u></i><i class="pc-f">${f1(f.f*(f.unit==='piece'?1:100))}<u>F</u></i></div>`;
+    const mult=f.unit==='piece'?1:100;
+    const pcf=f.isRecipe?`<div class="pcf"><i class="pc-p">${fmt(f.cal)}<u>kcal</u></i><i class="pc-p">${f1(f.p)}<u>P</u></i><i class="pc-c">${f1(f.c)}<u>C</u></i><i class="pc-f">${f1(f.f)}<u>F</u></i>${f.fi?`<i class="pc-fi">${f1(f.fi)}<u>Fi</u></i>`:''}</div>`:
+      `<div class="pcf"><i class="pc-p">${f1(f.p*mult)}<u>P</u></i><i class="pc-c">${f1(f.c*mult)}<u>C</u></i><i class="pc-f">${f1(f.f*mult)}<u>F</u></i>${f.fi?`<i class="pc-fi">${f1((f.fi||0)*mult)}<u>Fi</u></i>`:''}</div>`;
     return `<div class="foodcard"><div class="fname"><b>${f.name}${badge}</b><span>${detail}</span></div>${pcf}${f.custom?`<button class="del" data-n="${f.name.replace(/"/g,'&quot;')}" aria-label="Remove">×</button>`:''}</div>`;
   }).join("");
   wrap.querySelectorAll(".del").forEach(b=>b.onclick=()=>{state.foods=state.foods.filter(f=>f.name!==b.dataset.n);saveFoods();renderFoods();renderFoodSelect();});
 }
-function syncCfLabels(){const per=cfUnit==='piece'?'/ piece':'/ 100'+cfUnit;$("#lblCal").textContent="Calories "+per;$("#lblPro").textContent="Protein "+per;$("#lblCarb").textContent="Carbs "+per;$("#lblFat").textContent="Fat "+per;}
+function syncCfLabels(){const per=cfUnit==='piece'?'/ piece':'/ 100'+cfUnit;$("#lblCal").textContent="Calories "+per;$("#lblPro").textContent="Protein "+per;$("#lblCarb").textContent="Carbs "+per;$("#lblFat").textContent="Fat "+per;$("#lblFib").textContent="Fibre "+per;}
 
 /* ================= WEIGHT / ENGINE ================= */
 const sortedWeigh=()=>state.weighins.slice().sort((a,b)=>a.date<b.date?-1:1);
@@ -793,7 +797,7 @@ function updateRiNutrition(row){
   const calEl=row.querySelector('.ri-cal');
   if(!fd||!calEl)return;
   const raw=parseFloat(row.querySelector('.ri-raw').value)||0;
-  if(!raw){['.ri-cal','.ri-pro','.ri-car','.ri-fat'].forEach(s=>{const e=row.querySelector(s);if(e)e.textContent='—';});return;}
+  if(!raw){['.ri-cal','.ri-pro','.ri-car','.ri-fat','.ri-fi'].forEach(s=>{const e=row.querySelector(s);if(e)e.textContent='—';});return;}
   const n=food.toLowerCase();
   const method=/rice|pasta|noodle|\boat\b|chapathi|roti|wheat|rajma|lentil|\bdal\b|chickpea|bean|moong|chana/.test(n)?'boiled':'stirfried';
   const fac=fd.unit==='g'?getCookFactor(food,method):1;
@@ -801,6 +805,7 @@ function updateRiNutrition(row){
   row.querySelector('.ri-pro').textContent=(fd.p*raw*fac).toFixed(1);
   row.querySelector('.ri-car').textContent=(fd.c*raw*fac).toFixed(1);
   row.querySelector('.ri-fat').textContent=(fd.f*raw*fac).toFixed(1);
+  const fiEl=row.querySelector('.ri-fi');if(fiEl)fiEl.textContent=((fd.fi||0)*raw).toFixed(1);
 }
 function autoCookedWeight(row){
   const food=row.querySelector('.ri-food').value;
@@ -884,7 +889,7 @@ function wire(){
   function addRcpCreateRow(food='',rawQty='',cookedQty='',marinated=false,marinadeDesc=''){
     const wrap=$("#rcpCreateRows");
     const card=document.createElement("div");card.className="ri-card";
-    card.innerHTML=`<div class="ri-card-head"><div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search or type ingredient name…"/><div class="ri-food-drop"></div></div><input type="hidden" class="ri-food"/><button class="rdel" aria-label="Remove">×</button></div><div class="ri-card-body" style="display:none;"><div class="ri-weights-row"><div class="ri-wfield"><label>Raw (g)</label><input type="number" class="ri-raw" inputmode="decimal" placeholder="0" min="0" step="any" value="${rawQty}"/></div><div class="ri-arr">→</div><div class="ri-wfield"><label>Cooked (g)</label><input type="number" class="ri-cooked" inputmode="decimal" placeholder="auto" min="0" step="any" value="${cookedQty}"/></div></div><div class="ri-macros"><div class="ri-macro-chip">Cal <b class="ri-cal">—</b></div><div class="ri-macro-chip">Protein <b class="ri-pro">—</b>g</div><div class="ri-macro-chip">Carbs <b class="ri-car">—</b>g</div><div class="ri-macro-chip">Fat <b class="ri-fat">—</b>g</div></div><div class="ri-ing-mar"><div class="ri-ing-mar-row"><label>Marinated?</label><div class="seg ri-mar-seg"><button data-mar="no" class="${marinated?'':'on'}">No</button><button data-mar="yes" class="${marinated?'on':''}">Yes</button></div></div><div class="ri-ing-mar-body" style="${marinated?'':'display:none'};"><textarea class="ri-mar-desc" placeholder="e.g. garlic, lemon, olive oil, pepper, turmeric…" rows="2">${marinadeDesc}</textarea></div></div></div><div class="ri-quick-add"><p id="qa-label-${Date.now()}">Not in database — add nutrition per 100g to continue:</p><div class="ri-quick-add-grid"><div><label>Cal (kcal)</label><input type="number" class="qa-cal" placeholder="e.g. 165" min="0" step="1"/></div><div><label>Protein (g)</label><input type="number" class="qa-pro" placeholder="e.g. 31" min="0" step="0.1"/></div><div><label>Carbs (g)</label><input type="number" class="qa-car" placeholder="e.g. 0" min="0" step="0.1"/></div><div><label>Fat (g)</label><input type="number" class="qa-fat" placeholder="e.g. 3.6" min="0" step="0.1"/></div></div><button class="btn ghost sm qa-btn">Add to my database</button></div>`;
+    card.innerHTML=`<div class="ri-card-head"><div class="ri-food-ac"><input type="text" class="ri-food-inp" autocomplete="off" placeholder="Search or type ingredient name…"/><div class="ri-food-drop"></div></div><input type="hidden" class="ri-food"/><button class="rdel" aria-label="Remove">×</button></div><div class="ri-card-body" style="display:none;"><div class="ri-weights-row"><div class="ri-wfield"><label>Raw (g)</label><input type="number" class="ri-raw" inputmode="decimal" placeholder="0" min="0" step="any" value="${rawQty}"/></div><div class="ri-arr">→</div><div class="ri-wfield"><label>Cooked (g)</label><input type="number" class="ri-cooked" inputmode="decimal" placeholder="auto" min="0" step="any" value="${cookedQty}"/></div></div><div class="ri-macros"><div class="ri-macro-chip">Cal <b class="ri-cal">—</b></div><div class="ri-macro-chip">Protein <b class="ri-pro">—</b>g</div><div class="ri-macro-chip">Carbs <b class="ri-car">—</b>g</div><div class="ri-macro-chip">Fat <b class="ri-fat">—</b>g</div><div class="ri-macro-chip">Fibre <b class="ri-fi">—</b>g</div></div><div class="ri-ing-mar"><div class="ri-ing-mar-row"><label>Marinated?</label><div class="seg ri-mar-seg"><button data-mar="no" class="${marinated?'':'on'}">No</button><button data-mar="yes" class="${marinated?'on':''}">Yes</button></div></div><div class="ri-ing-mar-body" style="${marinated?'':'display:none'};"><textarea class="ri-mar-desc" placeholder="e.g. garlic, lemon, olive oil, pepper, turmeric…" rows="2">${marinadeDesc}</textarea></div></div></div><div class="ri-quick-add"><p id="qa-label-${Date.now()}">Not in database — add nutrition per 100g to continue:</p><div class="ri-quick-add-grid"><div><label>Cal (kcal)</label><input type="number" class="qa-cal" placeholder="e.g. 165" min="0" step="1"/></div><div><label>Protein (g)</label><input type="number" class="qa-pro" placeholder="e.g. 31" min="0" step="0.1"/></div><div><label>Carbs (g)</label><input type="number" class="qa-car" placeholder="e.g. 0" min="0" step="0.1"/></div><div><label>Fat (g)</label><input type="number" class="qa-fat" placeholder="e.g. 3.6" min="0" step="0.1"/></div><div><label>Fibre (g)</label><input type="number" class="qa-fi" placeholder="e.g. 2" min="0" step="0.1"/></div></div><button class="btn ghost sm qa-btn">Add to my database</button></div>`;
     const body=card.querySelector('.ri-card-body');
     const quickAdd=card.querySelector('.ri-quick-add');
     function showBody(){body.style.display='';if(rawQty){autoCookedWeight(card);updateRiNutrition(card);}}
@@ -907,7 +912,8 @@ function wire(){
       const pro=parseFloat(card.querySelector('.qa-pro').value)||0;
       const car=parseFloat(card.querySelector('.qa-car').value)||0;
       const fat=parseFloat(card.querySelector('.qa-fat').value)||0;
-      state.foods.push({name:nm,unit:'g',cal:cal/100,p:pro/100,c:car/100,f:fat/100,custom:true});
+      const fib=parseFloat(card.querySelector('.qa-fi').value)||0;
+      state.foods.push({name:nm,unit:'g',cal:cal/100,p:pro/100,c:car/100,f:fat/100,fi:fib/100,custom:true});
       persist();renderFoodSelect();
       quickAdd.style.display='none';showBody();toast(nm+' added to database');
     };
@@ -944,8 +950,8 @@ function wire(){
   $("#cfUnitSeg").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#cfUnitSeg").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");cfUnit=b.dataset.u;syncCfLabels();});
   $("#cfAdd").onclick=()=>{const name=$("#cfName").value.trim();if(!name){toast("Name your food");return;}if(foodByName(name)){toast("That name already exists");return;}
     const div=cfUnit==='piece'?1:100;
-    state.foods.push({name,unit:cfUnit,cal:(parseFloat($("#cfCal").value)||0)/div,p:(parseFloat($("#cfPro").value)||0)/div,c:(parseFloat($("#cfCarb").value)||0)/div,f:(parseFloat($("#cfFat").value)||0)/div,custom:true});
-    saveFoods();renderFoods();renderFoodSelect();["cfName","cfCal","cfPro","cfCarb","cfFat"].forEach(id=>$("#"+id).value="");toast("Food saved");};
+    state.foods.push({name,unit:cfUnit,cal:(parseFloat($("#cfCal").value)||0)/div,p:(parseFloat($("#cfPro").value)||0)/div,c:(parseFloat($("#cfCarb").value)||0)/div,f:(parseFloat($("#cfFat").value)||0)/div,fi:(parseFloat($("#cfFib").value)||0)/div,custom:true});
+    saveFoods();renderFoods();renderFoodSelect();["cfName","cfCal","cfPro","cfCarb","cfFat","cfFib"].forEach(id=>$("#"+id).value="");toast("Food saved");};
   $("#wAdd").onclick=()=>{const date=$("#wDate").value,kg=parseFloat($("#wKg").value);if(!date||!(kg>0)){toast("Enter your weight");return;}
     state.weighins=state.weighins.filter(x=>x.date!==date);state.weighins.push({date,kg});saveWeigh();$("#wKg").value="";renderWeight();toast("Weight saved");};
   $("#setTarget").onchange=()=>{state.settings.target=parseInt($("#setTarget").value)||1500;saveSettings();renderLog();renderWeight();};
@@ -981,12 +987,13 @@ async function parseWithAI(text) {
   const prompt = `You are a meal log assistant for a calorie tracking app. Parse the user's food description and return a JSON object.
 
 Nutrition storage format (per 1 unit):
-- unit "g": cal/p/c/f are per 1 gram — so 100 kcal per 100g → cal: 1.0
-- unit "ml": cal/p/c/f are per 1 ml
-- unit "piece": cal/p/c/f are for one whole piece
+- unit "g": cal/p/c/f/fi are per 1 gram — so 100 kcal per 100g → cal: 1.0
+- unit "ml": cal/p/c/f/fi are per 1 ml
+- unit "piece": cal/p/c/f/fi are for one whole piece
+- fi = dietary fibre in grams
 
 Return ONLY this JSON (no markdown, no explanation):
-{"entries":[{"meal":"Breakfast|Lunch|Evening|Dinner","food":"food name","qty":number}],"new_foods":[{"name":"food name","unit":"g|ml|piece","cal":number,"p":number,"c":number,"f":number}]}
+{"entries":[{"meal":"Breakfast|Lunch|Evening|Dinner","food":"food name","qty":number}],"new_foods":[{"name":"food name","unit":"g|ml|piece","cal":number,"p":number,"c":number,"f":number,"fi":number}]}
 
 Rules:
 1. Match foods to the known list by name (fuzzy ok). Use the exact name from the list.
